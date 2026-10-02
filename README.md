@@ -301,9 +301,9 @@ coincide, hay que avisar al equipo antes de seguir:
 - **`docs/diccionario_datos.md`** — qué hay en cada tabla de `indicadores` y las cinco
   advertencias que hay que respetar al citar cualquier cifra. Lectura obligatoria antes
   de construir el tablero.
-- **`LEEME.md`** — contexto del proyecto, hallazgos candidatos y reparto de tareas.
-- **`INSTRUCCIONES_EQUIPO.md`** — instrucciones por persona y plantilla de ficha técnica
-  por fuente.
+
+El contexto del proyecto, el reparto de tareas y las fichas técnicas por fuente viven en
+Notion, no en el repositorio.
 
 ## Estado y pendientes
 

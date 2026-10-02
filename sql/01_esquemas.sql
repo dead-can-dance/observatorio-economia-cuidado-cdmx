@@ -274,7 +274,7 @@ COMMENT ON COLUMN curada.censo_ageb_mujeres.mujeres_15a59 IS
     'población en edad de cuidar y el denominador del indicador de carga.';
 COMMENT ON COLUMN curada.censo_ageb_mujeres.carga_directa_x100_mujeres IS
     'Personas que necesitan cuidado directo por cada 100 mujeres de 15 a 59: '
-    '(pob_0a5 + pcdisc_mot2) / mujeres_15a59 * 100. Rango observado: 1.2 a 37.5. '
+    '(pob_0a5 + pcdisc_mot2) / mujeres_15a59 * 100. Rango observado: 1.1 a 37.5. '
     'No incluye a toda la población de 60+, porque la mayoría es autónoma.';
 COMMENT ON COLUMN curada.censo_ageb_mujeres.pct_hog_jefa IS
     '% de hogares con jefatura femenina: hogjef_f / tothog * 100.';

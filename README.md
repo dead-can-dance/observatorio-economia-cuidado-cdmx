@@ -159,6 +159,28 @@ docker compose down -v           # apagar y BORRAR la base
 
 ---
 
+## Problemas comunes
+
+**`429 Too Many Requests` al bajar las imágenes.** El build falla con algo como
+`failed to copy: httpReadSeeker: failed open: unexpected status code ... 429 Too Many
+Requests`. No es el proyecto: Docker Hub limita las descargas por dirección IP a quien
+no inicia sesión, y en una red compartida (la universidad, un café) ese límite se gasta
+entre todos. Se arregla iniciando sesión con una cuenta gratuita de Docker Hub, que
+tiene un límite mucho más alto:
+
+```bash
+docker login          # usuario y contraseña de hub.docker.com
+docker compose up --build
+```
+
+**La primera construcción tarda.** La imagen de Spark pesa cerca de 2 GB, así que el
+primer `docker compose up --build` puede llevarse varios minutos bajándola y otro tanto
+precargando el driver JDBC en la caché de Ivy. No está colgado. Las veces siguientes
+usan la caché de Docker y arrancan en segundos; un `docker compose down -v` borra la
+base pero no la imagen, así que no vuelve a pasar por esto.
+
+---
+
 ## Conectarse a PostgreSQL desde una herramienta de tablero
 
 El puerto está publicado al host, así que Metabase, Power BI, Superset, Grafana, Tableau,

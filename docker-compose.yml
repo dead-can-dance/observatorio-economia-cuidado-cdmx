@@ -15,6 +15,11 @@
 
 services:
 
+  # Nota: ningún servicio fija container_name. Con un nombre fijo, dos copias del
+  # repositorio en la misma máquina chocan ("container name already in use").
+  # Compose los nombra <proyecto>-<servicio>-1, y todos los comandos de abajo
+  # usan el nombre del SERVICIO (db, etl), que no cambia.
+
   # ---------------------------------------------------------------------------
   # Base de datos. Al inicializarse por primera vez ejecuta sql/01_esquemas.sql,
   # que crea los esquemas cruda / curada / indicadores y las tablas con sus
@@ -22,7 +27,6 @@ services:
   # ---------------------------------------------------------------------------
   db:
     image: postgres:16
-    container_name: cuidados_db
     env_file: .env
     environment:
       # UTF-8 explícito: los nombres de las alcaldías llevan acentos
@@ -56,7 +60,6 @@ services:
     build:
       context: .
       dockerfile: docker/spark/Dockerfile
-    container_name: cuidados_etl
     env_file: .env
     environment:
       # Dentro de la red de Docker la base se llama por el nombre del servicio,

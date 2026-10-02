@@ -74,11 +74,18 @@ Para levantar la base y el ETL, lo único que hace falta:
 - **Docker** y **Docker Compose v2 o superior**
 - ~4 GB de disco libre (la imagen de Spark es grande) y conexión a internet la primera vez
 
+Opcional, solo si quieres consultar la base con `psql` desde tu máquina en vez de desde
+el contenedor: **`postgresql-client`** (`sudo apt install postgresql-client` en
+Debian/Ubuntu, `brew install libpq` en macOS). No es necesario: más abajo hay una
+alternativa que corre dentro de Docker.
+
 Para volver a ejecutar los notebooks, además:
 
 - **Python 3.10+** con `pandas>=2.2,<3`, `numpy`, `matplotlib`, `scikit-learn` y `jupyter`
   > El tope de pandas no es un capricho: en pandas 3.0 se eliminó el parámetro
   > `include_groups` que usa el notebook 02 y el cuaderno truena.
+- En Debian/Ubuntu, el paquete **`python3-venv`** (`sudo apt install python3-venv`). No
+  viene de fábrica y sin él `python3 -m venv` falla con *"ensurepip is not available"*.
 - ~400 MB de disco para los microdatos del INEGI
 
 ---
@@ -97,6 +104,11 @@ cp .env.example .env
 # 3. Levantar
 docker compose up --build
 ```
+
+> **Si el puerto 5432 ya está ocupado** —porque tienes PostgreSQL instalado o algún otro
+> proyecto corriendo— el arranque falla con *"port is already allocated"*. No hay que
+> apagar nada: cambia `POSTGRES_PORT` en tu `.env` (por ejemplo `55432`) y vuelve a
+> levantar. Solo cambia el puerto del host; dentro de Docker la base sigue en el 5432.
 
 Eso es todo: **no hace falta descargar nada del INEGI.** Las 18 tablas limpias de
 `data/curada/` pesan 1.5 MB y vienen en el repositorio, justamente para que el proyecto
@@ -160,7 +172,15 @@ un notebook o `psql` se conectan igual:
 | Esquema | **`indicadores`** |
 | SSL | no hace falta en local |
 
-Prueba rápida:
+Prueba rápida **sin instalar nada**, usando el `psql` que ya viene en el contenedor:
+
+```bash
+docker compose exec db psql -U observatorio -d cuidados \
+  -c "SELECT etiqueta, valor_num, unidad, nivel_geografico FROM indicadores.kpi_cdmx;"
+```
+
+Lo mismo desde tu máquina, si instalaste `postgresql-client`. Te pedirá la contraseña
+que pusiste en `.env`:
 
 ```bash
 psql -h localhost -p 5432 -U observatorio -d cuidados \
@@ -187,8 +207,8 @@ Los CSV de `data/curada/` ya están en el repositorio, así que esto solo hace f
 verificar el método, cambiar un cálculo o actualizar una fuente del INEGI.
 
 ```bash
-# 1. Entorno de Python
-python -m venv .venv && source .venv/bin/activate
+# 1. Entorno de Python  (en Debian/Ubuntu: sudo apt install python3-venv)
+python3 -m venv .venv && source .venv/bin/activate
 pip install "pandas>=2.2,<3" numpy matplotlib scikit-learn jupyter
 
 # 2. Descargar los microdatos del INEGI a data/raw/ (~175 MB comprimidos)

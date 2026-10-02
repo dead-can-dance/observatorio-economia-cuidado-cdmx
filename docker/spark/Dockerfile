@@ -2,8 +2,7 @@
 # Trabajo de PySpark del Observatorio de la Economía del Cuidado.
 #
 # Imagen oficial de Apache Spark con Python, fijada a una versión concreta.
-# Nada de Alpine: PySpark y sus dependencias dan problemas con musl, y el
-# propio INEGI-PP7 ya lo había advertido en las instrucciones del equipo.
+# Nada de Alpine: PySpark y sus dependencias dan problemas con musl.
 #
 # Spark 4.x es obligatorio, no una preferencia: el ETL usa Column.try_cast(),
 # que no existe en Spark 3.

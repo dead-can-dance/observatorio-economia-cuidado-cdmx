@@ -12,7 +12,7 @@
 -- Convenciones de tipos, iguales en todo el archivo:
 --   * Claves geográficas (cvegeo_ageb, cve_ent, cve_mun, cve_loc, ageb) -> TEXT.
 --     NUNCA numéricas: '09' se volvería 9 y se perdería el cero a la izquierda,
---     y 219 de las 2,433 AGEB de la CDMX son alfanuméricas (p. ej. '003A').
+--     y 222 de las 2,433 AGEB de la CDMX son alfanuméricas (p. ej. '003A').
 --   * Porcentajes y tasas -> NUMERIC(_,1), un decimal.
 --   * Conteos -> INTEGER, nulos permitidos (ver nota sobre confidencialidad).
 --   * Coordenadas -> DOUBLE PRECISION.
@@ -159,7 +159,6 @@ CREATE TABLE IF NOT EXISTS curada.censo_ageb (
     pob_sin_serv_salud      INTEGER,
     hogares                 INTEGER,
     hogares_jefa            INTEGER,
-    es_valida_ranking       BOOLEAN NOT NULL,
     tiene_centroide         BOOLEAN NOT NULL
 );
 
@@ -179,7 +178,7 @@ COMMENT ON COLUMN curada.censo_ageb.cve_mun IS
 COMMENT ON COLUMN curada.censo_ageb.nom_mun IS 'Nombre de la alcaldía, con acentos.';
 COMMENT ON COLUMN curada.censo_ageb.cve_loc IS 'Clave de localidad, 4 caracteres.';
 COMMENT ON COLUMN curada.censo_ageb.ageb IS
-    'Clave del AGEB dentro de la localidad, 4 caracteres. Es ALFANUMÉRICA: 219 de '
+    'Clave del AGEB dentro de la localidad, 4 caracteres. Es ALFANUMÉRICA: 222 de '
     'las 2,433 terminan en letra (p. ej. 003A). Leerla como número las destruye.';
 COMMENT ON COLUMN curada.censo_ageb.pob_total IS 'Población total del AGEB (POBTOT).';
 COMMENT ON COLUMN curada.censo_ageb.pob_0a2 IS 'Población de 0 a 2 años (P_0A2).';
@@ -202,14 +201,14 @@ COMMENT ON COLUMN curada.censo_ageb.pob_sin_serv_salud IS
 COMMENT ON COLUMN curada.censo_ageb.hogares IS 'Total de hogares censales (TOTHOG).';
 COMMENT ON COLUMN curada.censo_ageb.hogares_jefa IS
     'Hogares con jefatura femenina (HOGJEF_F).';
-COMMENT ON COLUMN curada.censo_ageb.es_valida_ranking IS
-    'TRUE si el AGEB tiene al menos 100 mujeres de 15 a 59 y carga de cuidado no nula '
-    '(2,326 de 2,433). Las AGEB diminutas producen razones extremas y se excluyen de '
-    'los rankings, no de los totales.';
 COMMENT ON COLUMN curada.censo_ageb.tiene_centroide IS
-    'TRUE si el AGEB tiene un punto de referencia para medir distancias (2,320 de '
-    '2,433). Seis AGEB válidas quedaron fuera por no tener ningún establecimiento '
-    'del DENUE del cual derivar el centroide aproximado.';
+    'TRUE si el AGEB entra en el análisis territorial (2,320 de 2,433), es decir, si '
+    'aparece en curada.censo_ageb_mujeres y en indicadores.carga_ageb. '
+    'El embudo completo del notebook es 2,433 AGEB urbanas -> 2,326 con al menos 100 '
+    'mujeres de 15 a 59 y carga no nula -> 2,320 con centroide. El paso intermedio de '
+    '2,326 NO se puede reconstruir desde los CSV de data/curada/, porque las variables '
+    'de mujeres solo vienen en la tabla ya filtrada a 2,320; habría que volver al '
+    'microdato del Censo. Por eso aquí solo se distingue 2,433 contra 2,320.';
 
 CREATE INDEX IF NOT EXISTS ix_censo_ageb_mun ON curada.censo_ageb (cve_mun);
 

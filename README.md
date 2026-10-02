@@ -15,6 +15,7 @@ cada tabla se conservan en el repositorio como evidencia del método.
 |---|---|---|
 | Mujeres de la CDMX que realizan trabajo de cuidado | 62.2 % | ENUT 2024 |
 | Jornada total de las mujeres ocupadas | 77.0 h/semana | ENUT 2024 |
+| Brecha de trabajo no pagado, mujeres − hombres ocupados | +12.7 h/semana | ENUT 2024 |
 | AGEB con carga alta y sin respaldo a 1 km | 88 | Censo 2020 + DENUE |
 | Mujeres de 15 a 59 que viven ahí | 125,256 | Censo 2020 + DENUE |
 | Cuidadoras que preferirían el cuidado en casa | 61.2 % | ENASIC 2022 *(nacional)* |
@@ -130,6 +131,7 @@ Cifras de control:
   [OK ] AGEB con carga alta y sin respaldo a 1 km     esperado=    88  obtenido=    88
   [OK ] Alcaldías en indicadores.resumen_alcaldia     esperado=    16  obtenido=    16
   [OK ] Alcaldías en curada.censo_alcaldia            esperado=    16  obtenido=    16
+  [OK ] Brecha ENUT de trabajo no pagado (h)          esperado=  12.7  obtenido=  12.7
 
 Todas las cifras de control cuadran.
 ```
@@ -235,6 +237,7 @@ coincide, hay que avisar al equipo antes de seguir:
 |---|---|
 | % de mujeres de la CDMX que cuidan (ENUT) | 62.2 |
 | Jornada total de mujeres ocupadas (ENUT) | 77.0 h |
+| Brecha de trabajo no pagado, mujeres − hombres ocupados (ENUT) | 12.7 h |
 | AGEB con carga alta y sin respaldo | 88 |
 | % de cuidadoras que prefiere cuidado en casa (ENASIC) | 61.2 |
 

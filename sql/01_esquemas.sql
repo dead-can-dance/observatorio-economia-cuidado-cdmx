@@ -397,11 +397,14 @@ CREATE TABLE IF NOT EXISTS indicadores.kpi_cdmx (
 );
 
 COMMENT ON TABLE indicadores.kpi_cdmx IS
-    'Las cifras de cabecera del Observatorio: la tira de KPIs del tablero. Doce '
-    'filas, una por cifra citable. Sirve también como prueba de regresión del ETL: '
-    'si cambia un valor sin que nadie haya tocado el método, algo se rompió. '
-    'Valores de control: 62.2% de mujeres que cuidan, 77.0 h de jornada de las '
-    'mujeres ocupadas, 88 AGEB sin respaldo, 61.2% que prefiere cuidado en casa.';
+    'Las cifras de cabecera del Observatorio: la tira de KPIs del tablero. Trece '
+    'filas, una por cifra citable: doce salen de data/curada/resumen_cifras_clave.csv '
+    'y la decimotercera, la brecha de trabajo no pagado, la calcula el ETL desde la '
+    'columna sin redondear de la doble jornada. Sirve también como prueba de '
+    'regresión del ETL: si cambia un valor sin que nadie haya tocado el método, algo '
+    'se rompió. Valores de control: 62.2% de mujeres que cuidan, 77.0 h de jornada de '
+    'las mujeres ocupadas, 12.7 h de brecha de trabajo no pagado, 88 AGEB sin '
+    'respaldo, 61.2% que prefiere cuidado en casa.';
 
 COMMENT ON COLUMN indicadores.kpi_cdmx.clave IS
     'Identificador estable de la cifra, con el prefijo de la fuente '

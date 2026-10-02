@@ -414,6 +414,12 @@ def cargar_curada(spark, dfs):
 # 5. CAPA INDICADORES — lo que consume el tablero
 # =============================================================================
 
+# Clave del KPI que no viene de resumen_cifras_clave.csv sino de la doble jornada.
+# Se usa al construirlo y en la cifra de control, así que vive en una sola constante.
+CLAVE_BRECHA_NO_PAGADO = ('ENUT · brecha de trabajo no pagado, '
+                          'mujeres − hombres ocupados (h)')
+
+
 def cargar_indicadores(spark, dfs, cur):
     """Construye las nueve tablas del esquema `indicadores`.
 
@@ -452,7 +458,31 @@ def cargar_indicadores(spark, dfs, cur):
         F.col('nivel_geografico'),
         F.col('fuente'),
     )
-    escribir(spark, kpi_cdmx, 'indicadores.kpi_cdmx')
+
+    # La brecha de trabajo no pagado no está en el CSV de cifras clave: se calcula
+    # aquí, desde la columna SIN redondear de la doble jornada. Restar las columnas
+    # de indicadores.enut_doble_jornada, que van con un decimal, daría 12.6
+    # (31.3 − 18.7) en vez de 12.7, que es la cifra publicada.
+    jornada = tabla_cruda(dfs, 'mujeres_doble_jornada_cdmx')
+    no_pagado = F.col('trabajo_no_pagado_sin_redondear').try_cast(DoubleType())
+    brecha = jornada.select(
+        F.max(F.when(F.col('grupo') == 'Mujeres ocupadas', no_pagado)).alias('_mujeres'),
+        F.max(F.when(F.col('grupo') == 'Hombres ocupados (ref.)', no_pagado)).alias('_hombres'),
+    ).select(
+        F.lit(CLAVE_BRECHA_NO_PAGADO).alias('clave'),
+        (F.col('_mujeres') - F.col('_hombres')).try_cast(DecimalType(12, 1)).alias('valor_num'),
+    ).select(
+        F.col('clave'),
+        # Mismo criterio que arriba: la etiqueta es la clave sin el prefijo de fuente.
+        etiqueta.alias('etiqueta'),
+        F.col('valor_num'),
+        F.lit(None).cast('string').alias('valor_texto'),
+        F.lit('horas por semana').alias('unidad'),
+        F.lit('CDMX').alias('nivel_geografico'),
+        F.lit(FTE_ENUT).alias('fuente'),
+    )
+
+    escribir(spark, kpi_cdmx.unionByName(brecha), 'indicadores.kpi_cdmx')
 
     # -- 5.2 Resumen por alcaldía: el cruce de cuatro tablas ----------------------
     # Las tablas por alcaldía solo traen el NOMBRE, no la clave. Se unen por
@@ -668,6 +698,11 @@ CONTROLES = [
      'SELECT count(*) FROM indicadores.resumen_alcaldia', 16),
     ('Alcaldías en curada.censo_alcaldia',
      'SELECT count(*) FROM curada.censo_alcaldia', 16),
+    # Se compara como texto: el valor llega como NUMERIC(12,1) y un Decimal('12.7')
+    # nunca es igual al float 12.7 de Python.
+    ('Brecha ENUT de trabajo no pagado (h)',
+     "SELECT valor_num::text FROM indicadores.kpi_cdmx "
+     f"WHERE clave = '{CLAVE_BRECHA_NO_PAGADO}'", '12.7'),
 ]
 
 

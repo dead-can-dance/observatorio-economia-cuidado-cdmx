@@ -22,7 +22,10 @@ cabecera del Observatorio, listas para mostrar sin calcular nada. Sirve además 
 prueba de regresión del ETL — si un valor cambia sin que nadie haya tocado el método,
 algo se rompió.
 
-**Filas esperadas:** 12 (una por cifra citable).
+**Filas esperadas:** 13 (una por cifra citable). Doce salen de
+`data/curada/resumen_cifras_clave.csv`; la decimotercera, `ENUT · brecha de trabajo no
+pagado, mujeres − hombres ocupados (h)` = **12.7**, la calcula el ETL a partir de la
+columna sin redondear de la doble jornada (ver `indicadores.enut_doble_jornada`).
 
 | Columna | Tipo | Descripción | Unidad |
 |---|---|---|---|
@@ -36,6 +39,11 @@ algo se rompió.
 
 Hay una restricción que obliga a que `valor_num` o `valor_texto` tenga contenido: no
 puede existir un KPI vacío.
+
+> **La brecha de trabajo no pagado no se recalcula en el tablero.** Es 12.7 h y sale de
+> los valores sin redondear (31.351… − 18.636…). Restar las columnas de
+> `indicadores.enut_doble_jornada`, que van con un decimal, da 12.6 y contradice al
+> propio KPI. Si hay que mostrarla, se lee de esta tabla.
 
 ---
 
@@ -216,6 +224,12 @@ suman la jornada total.
 > estadísticamente distinta de cero pero frágil; la de trabajo no pagado (+12.7 h) es
 > sólida. El equipo acordó encabezar con el trabajo no pagado y usar las 77 h como dato
 > de apoyo.
+
+> **La brecha de +12.7 h ya está calculada** en `indicadores.kpi_cdmx`, con la clave
+> `ENUT · brecha de trabajo no pagado, mujeres − hombres ocupados (h)`. No se obtiene
+> restando las columnas de esta tabla: con un decimal, `(23.3 + 8.0) − (13.1 + 5.6)` da
+> 12.6. El ETL la calcula desde `cruda.mujeres_doble_jornada_cdmx.trabajo_no_pagado_sin_redondear`,
+> la columna del CSV que conserva toda la precisión.
 
 ---
 

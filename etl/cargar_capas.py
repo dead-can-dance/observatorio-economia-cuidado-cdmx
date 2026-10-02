@@ -282,8 +282,8 @@ CODIGOS_RESPALDO = ['624411', '624412',    # guarderías
 def cargar_curada(spark, dfs):
     """Convierte tipos, limpia y llena las cuatro tablas de `curada` que tienen datos.
 
-    curada.ageb_centroide_oficial NO se toca: la llena Karen con el Marco
-    Geoestadístico y truncarla aquí borraría su trabajo en cada corrida.
+    curada.ageb_centroide_oficial NO se toca (pendiente: integración del Marco
+    Geoestadístico); truncarla aquí borraría esa carga en cada corrida.
     """
     print('\n--- CAPA CURADA (tipos y limpieza) ---')
 
@@ -746,8 +746,8 @@ def reporte(spark):
 
 
 # Tablas que este trabajo llena, en el orden en que se reportan.
-# curada.ageb_centroide_oficial aparece a propósito: debe salir en 0 hasta que
-# Karen cargue los polígonos del Marco Geoestadístico.
+# curada.ageb_centroide_oficial aparece a propósito: debe salir en 0 hasta que se
+# carguen los polígonos (pendiente: integración del Marco Geoestadístico).
 TABLAS_DESTINO = (
     [f'cruda.{t}' for t in ARCHIVOS_CRUDA] +
     ['curada.censo_ageb', 'curada.censo_ageb_mujeres', 'curada.censo_alcaldia',

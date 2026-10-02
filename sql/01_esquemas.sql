@@ -356,9 +356,10 @@ CREATE TABLE IF NOT EXISTS curada.ageb_centroide_oficial (
 
 COMMENT ON TABLE curada.ageb_centroide_oficial IS
     'Centroides reales de las AGEB, calculados sobre los polígonos del Marco '
-    'Geoestadístico del INEGI (capa 09a). SE CREA VACÍA a propósito: la carga es '
-    'tarea de Karen. Mientras esté vacía, los conteos a 1 km usan los centroides '
-    'aproximados de curada.censo_ageb_mujeres.lat_aprox, que son exploratorios. '
+    'Geoestadístico del INEGI (capa 09a). SE CREA VACÍA a propósito (pendiente: '
+    'integración del Marco Geoestadístico). Mientras esté vacía, los conteos a 1 km '
+    'usan los centroides aproximados de curada.censo_ageb_mujeres.lat_aprox, que son '
+    'exploratorios. '
     'Cuando se llene hay que recalcular el hallazgo B y volver a contar las 88 AGEB.';
 
 COMMENT ON COLUMN curada.ageb_centroide_oficial.cvegeo_ageb IS

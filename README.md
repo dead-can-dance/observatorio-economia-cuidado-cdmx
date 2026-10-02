@@ -162,38 +162,51 @@ docker compose down -v           # apagar y BORRAR la base
 ## Conectarse a PostgreSQL desde una herramienta de tablero
 
 El puerto está publicado al host, así que Metabase, Power BI, Superset, Grafana, Tableau,
-un notebook o `psql` se conectan igual:
+un notebook o `psql` se conectan igual.
+
+**El tablero se conecta con el usuario `tablero`, no con el administrador.** El
+`POSTGRES_USER` de `.env` es el dueño de la base: crea las tablas y las escribe desde el
+ETL. El rol `tablero` (lo crea `sql/02_usuario_tablero.sql` al inicializar la base) solo
+puede hacer `SELECT` sobre el esquema `indicadores`; `cruda` y `curada` no existen para
+él. Si la herramienta de tablero pide credenciales, son estas:
 
 | Parámetro | Valor |
 |---|---|
 | Host | `localhost` |
 | Puerto | `5432` (o el que hayas puesto en `POSTGRES_PORT`) |
 | Base de datos | `cuidados` (el `POSTGRES_DB` de tu `.env`) |
-| Usuario | el `POSTGRES_USER` de tu `.env` |
-| Contraseña | el `POSTGRES_PASSWORD` de tu `.env` |
+| Usuario | **`tablero`** |
+| Contraseña | el `TABLERO_PASSWORD` de tu `.env` |
 | Esquema | **`indicadores`** |
 | SSL | no hace falta en local |
+
+> El rol se crea junto con la base, así que cambiar `TABLERO_PASSWORD` en un `.env` que
+> ya levantó una vez no tiene efecto hasta un `docker compose down -v`.
 
 Prueba rápida **sin instalar nada**, usando el `psql` que ya viene en el contenedor:
 
 ```bash
-docker compose exec db psql -U observatorio -d cuidados \
+docker compose exec db psql -U tablero -d cuidados \
   -c "SELECT etiqueta, valor_num, unidad, nivel_geografico FROM indicadores.kpi_cdmx;"
 ```
 
-Lo mismo desde tu máquina, si instalaste `postgresql-client`. Te pedirá la contraseña
-que pusiste en `.env`:
+Lo mismo desde tu máquina, si instalaste `postgresql-client`. Te pedirá el
+`TABLERO_PASSWORD` que pusiste en `.env`:
 
 ```bash
-psql -h localhost -p 5432 -U observatorio -d cuidados \
+psql -h localhost -p 5432 -U tablero -d cuidados \
      -c "SELECT etiqueta, valor_num, unidad, nivel_geografico FROM indicadores.kpi_cdmx;"
 ```
 
 Cadena de conexión para SQLAlchemy, Metabase u otras herramientas:
 
 ```
-postgresql://observatorio:TU_CONTRASEÑA@localhost:5432/cuidados
+postgresql://tablero:TU_TABLERO_PASSWORD@localhost:5432/cuidados
 ```
+
+Que el usuario del tablero no pueda leer `cruda` ni `curada` es a propósito: son las
+capas de auditoría y se consultan con el usuario administrador, desde `psql` o desde un
+notebook, no desde una herramienta de visualización.
 
 > Si la herramienta de tablero corre **dentro de la misma red de Docker**, el host no es
 > `localhost` sino `db`, y el puerto siempre `5432`.
@@ -258,8 +271,9 @@ coincide, hay que avisar al equipo antes de seguir:
 │       └── Dockerfile           Imagen del ETL, sobre apache/spark:4.0.4-python3
 │
 ├── sql/
-│   └── 01_esquemas.sql          Esquemas y DDL de curada e indicadores,
-│                                con COMMENT en las 180 columnas
+│   ├── 01_esquemas.sql          Esquemas y DDL de curada e indicadores,
+│   │                            con COMMENT en las 180 columnas
+│   └── 02_usuario_tablero.sql   Rol `tablero`: solo lectura sobre indicadores
 ├── etl/
 │   ├── descargar_datos.py       Descarga las 4 fuentes del INEGI a data/raw/
 │   └── cargar_capas.py          Trabajo de PySpark: cruda → curada → indicadores

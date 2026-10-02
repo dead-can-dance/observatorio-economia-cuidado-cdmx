@@ -42,6 +42,9 @@ services:
       # vacío. Si la base ya existe, este archivo se ignora: por eso para
       # recargar el esquema desde cero hace falta `docker compose down -v`.
       - ./sql/01_esquemas.sql:/docker-entrypoint-initdb.d/01_esquemas.sql:ro
+      # Corre después del DDL: crea el rol `tablero`, de solo lectura sobre el
+      # esquema indicadores, con la contraseña de TABLERO_PASSWORD (.env).
+      - ./sql/02_usuario_tablero.sql:/docker-entrypoint-initdb.d/02_usuario_tablero.sql:ro
     healthcheck:
       # El ETL no debe arrancar hasta que la base acepte conexiones Y haya
       # terminado de correr el SQL de inicialización.

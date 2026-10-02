@@ -1,0 +1,74 @@
+# =============================================================================
+# Observatorio de la Economía del Cuidado — PP7 UNRC
+#
+# Dos servicios y nada más: una base PostgreSQL y un trabajo de PySpark que la
+# llena y termina. Sin Kafka, sin Airflow, sin clúster. El volumen de datos son
+# ~8,000 filas; lo que se demuestra aquí es la arquitectura por capas, no la
+# escala.
+#
+#   docker compose up --build      levanta la base y corre el ETL
+#   docker compose down -v         borra todo, incluida la base
+#
+# Las credenciales salen de .env (copiar de .env.example). El archivo .env no
+# se versiona.
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Base de datos. Al inicializarse por primera vez ejecuta sql/01_esquemas.sql,
+  # que crea los esquemas cruda / curada / indicadores y las tablas con sus
+  # tipos, llaves primarias y comentarios.
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16
+    container_name: cuidados_db
+    env_file: .env
+    environment:
+      # UTF-8 explícito: los nombres de las alcaldías llevan acentos
+      # (Álvaro Obregón, Tláhuac, Cuauhtémoc) y varias tablas se unen por nombre.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"
+    ports:
+      # Expuesto al host para que el tablero (y psql, y un notebook) se conecten
+      # desde fuera de Docker. El puerto de la izquierda se configura en .env.
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - datos_postgres:/var/lib/postgresql/data
+      # Todo lo que se monta aquí corre solo, una vez, cuando el volumen está
+      # vacío. Si la base ya existe, este archivo se ignora: por eso para
+      # recargar el esquema desde cero hace falta `docker compose down -v`.
+      - ./sql/01_esquemas.sql:/docker-entrypoint-initdb.d/01_esquemas.sql:ro
+    healthcheck:
+      # El ETL no debe arrancar hasta que la base acepte conexiones Y haya
+      # terminado de correr el SQL de inicialización.
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Trabajo de PySpark en modo local. Arranca cuando la base está sana, carga
+  # las tres capas, imprime el reporte de control y termina.
+  # ---------------------------------------------------------------------------
+  etl:
+    build:
+      context: .
+      dockerfile: docker/spark/Dockerfile
+    container_name: cuidados_etl
+    env_file: .env
+    environment:
+      # Dentro de la red de Docker la base se llama por el nombre del servicio,
+      # no localhost, y siempre en el 5432: el puerto publicado al host no
+      # cambia el puerto interno.
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+    depends_on:
+      db:
+        condition: service_healthy
+    # Es un trabajo por lotes, no un servidor: si falla, que falle y se vea.
+    restart: "no"
+
+volumes:
+  datos_postgres:

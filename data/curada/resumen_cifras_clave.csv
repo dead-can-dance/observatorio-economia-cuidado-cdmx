@@ -1,0 +1,13 @@
+clave,valor,nivel_geografico,fuente
+ENUT · % mujeres CDMX que cuidan,62.2,CDMX,"INEGI, ENUT 2024"
+ENUT · h/semana mujeres que cuidan,12.2,CDMX,"INEGI, ENUT 2024"
+ENUT · ref. h/semana hombres que cuidan,8.1,CDMX,"INEGI, ENUT 2024"
+ENUT · jornada total mujeres ocupadas (h),77.0,CDMX,"INEGI, ENUT 2024"
+"ENUT · jornada total hombres ocupados (h, ref.)",73.5,CDMX,"INEGI, ENUT 2024"
+ENASIC · % cuidadoras que buscó un servicio,3.2,Nacional,"INEGI, ENASIC 2022"
+ENASIC · % cuidadoras que prefiere cuidado en casa,61.2,Nacional,"INEGI, ENASIC 2022"
+ENASIC · % cuidadoras que sería cuidadora pagada,44.4,Nacional,"INEGI, ENASIC 2022"
+"Censo · carga directa x100 mujeres, CDMX",21.6,CDMX,"INEGI, Censo de Población y Vivienda 2020"
+Censo · alcaldía con mayor carga,Milpa Alta,CDMX,"INEGI, Censo de Población y Vivienda 2020"
+Cruce · AGEB alta carga sin respaldo,88,CDMX,"INEGI, Censo 2020 + DENUE 05/2026"
+Cruce · mujeres 15–59 en esas AGEB,125256,CDMX,"INEGI, Censo 2020 + DENUE 05/2026"

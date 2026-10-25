@@ -14,6 +14,10 @@ conservan en el repositorio como evidencia del método.
 > **Inicio rápido del observatorio:** `python iniciar.py` y se abre en
 > <http://127.0.0.1:8000>. Solo necesita Python 3.10+; ver
 > [El observatorio web](#el-observatorio-web-fase-4).
+>
+> **En internet, sin tu computadora:** la misma historia está en una app de Streamlit
+> (`tablero/app.py`) que se publica gratis en Streamlit Community Cloud; ver
+> [La versión en Streamlit](#la-versión-en-streamlit).
 
 **Cifras de cabecera** (ver `docs/diccionario_datos.md` para cómo citarlas):
 
@@ -52,6 +56,7 @@ flowchart TD
 
     API["backend/ · FastAPI<br/>usuario tablero, solo indicadores"]
     WEB["frontend/ · Vue 3 + ECharts + Leaflet<br/>observatorio web (Fase 4)"]
+    ST["tablero/ · Streamlit<br/>versión en línea (Community Cloud)"]
 
     DESC --> D & C & E & A
     D & C & E & A --> NB
@@ -63,6 +68,7 @@ flowchart TD
     SIND --> API
     CUR -.respaldo sin Docker:<br/>mismas reglas del ETL.-> API
     API --> WEB
+    API -.mismos módulos de backend/observatorio.-> ST
 
     SQLDDL["sql/01_esquemas.sql"] -.define.-> SCURADA & SIND
 ```
@@ -323,6 +329,7 @@ python iniciar.py --pruebas
 Verifican que la réplica reproduce las cifras de control y los tipos del DDL (incluido el
 redondeo de Spark), que la ruta de PostgreSQL produce tablas idénticas, que la API respeta
 las restricciones del diccionario y que el frontend se sirve con los tipos MIME correctos.
+El mismo comando corre también las pruebas de la app de Streamlit (`tablero/tests/`).
 
 ### Decisiones de diseño
 
@@ -335,6 +342,59 @@ las restricciones del diccionario y que el frontend se sirve con los tipos MIME 
   la guía de visualización, verificada para daltonismo y contraste (detalle en
   `frontend/css/tokens.css`). Cada gráfica tiene su tabla gemela («Ver tabla») y hay tema
   claro y oscuro.
+
+---
+
+## La versión en Streamlit
+
+`tablero/app.py` cuenta la misma historia que la página web, en seis páginas: Inicio,
+México, Ciudad de México, Alcaldías, Territorio y Metodología. No duplica cálculos: importa
+`backend/observatorio`, así que usa la misma réplica del ETL, las mismas 18 cifras de
+control y los mismos hallazgos redactados. Existe para publicar el observatorio en internet
+sin depender de que una computadora del equipo esté prendida.
+
+### Probarla en tu computadora
+
+```bash
+python iniciar.py --streamlit        # http://127.0.0.1:8501
+```
+
+La primera vez instala `tablero/requirements.txt` en el mismo entorno virtual.
+
+### Publicarla en Streamlit Community Cloud (gratis)
+
+1. Entra a <https://share.streamlit.io> con **Continue with GitHub**. La cuenta tiene que
+   ser administradora del repositorio (la dueña, `dead-can-dance`); una cuenta que solo
+   colabora puede editar la app pero no publicarla. La alternativa es hacer un fork a la
+   cuenta propia y publicar desde el fork.
+2. **Create app** → desplegar desde GitHub, con estos datos:
+
+   | Campo | Valor |
+   |---|---|
+   | Repository | `dead-can-dance/observatorio-economia-cuidado-cdmx` |
+   | Branch | `observatorio-streamlit` (o `main`, cuando se fusione) |
+   | Main file path | `tablero/app.py` |
+   | Advanced settings → Python | 3.12 |
+
+3. **Deploy**. La primera vez tarda unos minutos en instalar dependencias. Después, cada
+   `git push` a esa rama actualiza la app sola.
+
+En la nube no hay `.env` ni PostgreSQL, así que la app reconstruye las tablas de
+`indicadores` desde `data/curada/` (la página de Metodología dice qué fuente usó). Las
+apps gratuitas se duermen si nadie las visita por un tiempo; la primera visita después
+tarda unos segundos en despertarla. Los colores y el tema están en `.streamlit/config.toml`.
+
+### Decisiones de la versión en Streamlit
+
+- **Gráficas en Altair y mapa en pydeck**, los dos incluidos en Streamlit: no hay
+  dependencias extra. El mapa base es el de CARTO que Streamlit elige según el tema.
+- **Colores de datos que sirven en tema claro y oscuro.** Streamlit no siempre sabe al
+  abrir la app qué tema usa la persona, así que el acento (#6f5bf0), el gris de referencia
+  y los tres tramos de la doble jornada se validaron contra los dos fondos (detalle en
+  `tablero/estilo.py`). El texto de las gráficas toma el color del tema.
+- **Clic para elegir.** Una casilla del mosaico, una barra del ranking o un punto de la
+  dispersión cambian la ficha de alcaldía, y «Ver sus AGEB en el mapa» lleva a Territorio
+  con esa alcaldía enfocada.
 
 ---
 
@@ -384,8 +444,9 @@ coincide, hay que avisar al equipo antes de seguir:
 
 ```
 .
-├── iniciar.py                   Levanta el observatorio web con un solo comando
+├── iniciar.py                   Levanta el observatorio web (o la app de Streamlit)
 ├── docker-compose.yml           Los dos servicios: db y etl
+├── .streamlit/config.toml       Tema y colores de la app de Streamlit
 ├── .env.example                 Plantilla de credenciales (copiar a .env)
 ├── .gitignore                   Excluye data/raw/, *.zip, .env, checkpoints
 │
@@ -399,6 +460,13 @@ coincide, hay que avisar al equipo antes de seguir:
 │   ├── css/                     tokens.css (paleta claro/oscuro) y estilos.css
 │   ├── js/                      secciones, componentes y gráficas
 │   └── vendor/                  Vue, ECharts y Leaflet, copiados y verificados
+├── tablero/                     App de Streamlit (versión en línea)
+│   ├── app.py                   Archivo principal y navegación
+│   ├── paginas/                 Las seis páginas
+│   ├── datos.py, graficas.py,   Carga de datos, gráficas en Altair, mapa en
+│   │   mapa.py, componentes.py  pydeck y piezas comunes
+│   ├── tests/                   Pruebas (AppTest de Streamlit)
+│   └── requirements.txt         Lo que instala Streamlit Community Cloud
 │
 ├── docker/
 │   └── spark/

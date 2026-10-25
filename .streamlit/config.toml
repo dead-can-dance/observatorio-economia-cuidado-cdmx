@@ -1,0 +1,29 @@
+# Configuración de la app de Streamlit (tablero/app.py). Streamlit la lee desde la raíz
+# del repositorio, tanto en local como en Streamlit Community Cloud.
+# Los colores son los mismos de frontend/css/tokens.css (paleta Jacaranda).
+
+[browser]
+gatherUsageStats = false
+
+[client]
+# Quien visita la app no ve las opciones de desarrollo.
+toolbarMode = "viewer"
+
+[theme]
+baseRadius = "medium"
+
+[theme.light]
+primaryColor = "#6250d6"
+backgroundColor = "#f9f9f7"
+secondaryBackgroundColor = "#f0efec"
+textColor = "#0b0b0b"
+borderColor = "#e1e0d9"
+chartSequentialColors = ["#dbdcfe", "#c9cbfe", "#b9bafe", "#a8a8fe", "#9895fd", "#8a82fd", "#6f5bf0", "#5644c0", "#3e2e92", "#322679"]
+
+[theme.dark]
+primaryColor = "#9085e9"
+backgroundColor = "#0d0d0d"
+secondaryBackgroundColor = "#1a1a19"
+textColor = "#f0efec"
+borderColor = "#2c2c2a"
+chartSequentialColors = ["#322679", "#3e2e92", "#5644c0", "#6f5bf0", "#8a82fd", "#9895fd", "#a8a8fe", "#b9bafe", "#c9cbfe", "#dbdcfe"]

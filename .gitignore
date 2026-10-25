@@ -15,3 +15,6 @@ venv/
 
 # Secretos de conexión. El que se versiona es .env.example.
 .env
+
+# Pruebas
+.pytest_cache/

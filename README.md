@@ -4,10 +4,16 @@ Proyecto universitario de Ciencia de Datos (UNRC, 7.º semestre) que mide **dón
 trabajo de cuidado no remunerado recae sobre las mujeres de la Ciudad de México, y qué
 tanto lo alivia la oferta de cuidados que tienen cerca**. Cruza cuatro fuentes públicas
 del INEGI —DENUE 05/2026, Censo de Población y Vivienda 2020, ENUT 2024 y ENASIC 2022—
-y las deja en una base PostgreSQL organizada en tres capas, lista para construir un
-tablero encima. La unidad de análisis es la mujer cuidadora; los datos de hombres
-aparecen solo como referencia para dimensionar la brecha. Los notebooks que originaron
-cada tabla se conservan en el repositorio como evidencia del método.
+y las deja en una base PostgreSQL organizada en tres capas. Encima de esa base vive el
+**observatorio web** (Fase 4): una página que va de lo general a lo particular —México,
+Ciudad de México, alcaldías y AGEB— y que se levanta en tu computadora con un solo
+comando. La unidad de análisis es la mujer cuidadora; los datos de hombres aparecen solo
+como referencia para dimensionar la brecha. Los notebooks que originaron cada tabla se
+conservan en el repositorio como evidencia del método.
+
+> **Inicio rápido del observatorio:** `python iniciar.py` y se abre en
+> <http://127.0.0.1:8000>. Solo necesita Python 3.10+; ver
+> [El observatorio web](#el-observatorio-web-fase-4).
 
 **Cifras de cabecera** (ver `docs/diccionario_datos.md` para cómo citarlas):
 
@@ -44,7 +50,8 @@ flowchart TD
         SIND[("indicadores<br/>listo para graficar")]
     end
 
-    DASH["Tablero<br/>(Fase 4)"]
+    API["backend/ · FastAPI<br/>usuario tablero, solo indicadores"]
+    WEB["frontend/ · Vue 3 + ECharts + Leaflet<br/>observatorio web (Fase 4)"]
 
     DESC --> D & C & E & A
     D & C & E & A --> NB
@@ -53,7 +60,9 @@ flowchart TD
     SPARK --> SCRUDA
     SCRUDA --> SCURADA
     SCURADA --> SIND
-    SIND --> DASH
+    SIND --> API
+    CUR -.respaldo sin Docker:<br/>mismas reglas del ETL.-> API
+    API --> WEB
 
     SQLDDL["sql/01_esquemas.sql"] -.define.-> SCURADA & SIND
 ```
@@ -238,6 +247,97 @@ las nueve tablas, sus columnas y, sobre todo, cómo *no* leerlas.
 
 ---
 
+## El observatorio web (Fase 4)
+
+Una página que responde la pregunta rectora de lo general a lo particular:
+
+| Sección | Escala | Fuentes | Qué muestra |
+|---|---|---|---|
+| 01 · México | Nacional | ENUT 2024, ENASIC 2022 | Quiénes cuidan y cuánto en el país; las cuidadoras y los servicios de cuidado (solo nacional). |
+| 02 · Ciudad de México | CDMX | ENUT 2024, Censo 2020 | Hallazgo A (doble jornada), la ciudad frente al país, la brecha por actividad y qué mujeres cuidan más. |
+| 03 · Alcaldías | Alcaldía | Censo 2020 + DENUE | Mosaico y ranking de 11 indicadores, ficha de cada alcaldía con sus hallazgos, carga contra presión sobre las guarderías y tabla completa. |
+| 04 · Territorio | AGEB | Censo 2020 + DENUE | Hallazgo B (exploratorio): mapa de las 2,320 AGEB, las 88 sin respaldo, embudo y distribución de la carga. |
+| 05 · Metodología | — | — | Las cinco advertencias, fuentes, glosario, descargas en CSV y estado de las cifras de control. |
+
+### Cómo levantarlo
+
+```bash
+python iniciar.py
+```
+
+- La primera vez crea un entorno virtual e instala `backend/requirements.txt` (unos
+  minutos, con internet). Si el repositorio está dentro de OneDrive, el entorno se crea en
+  `%LOCALAPPDATA%\observatorio-cuidado\.venv` para no sincronizar miles de archivos a la
+  nube; si no, en `.venv/`. Las siguientes veces arranca en segundos y sin internet.
+- Abre <http://127.0.0.1:8000> en el navegador. `Ctrl+C` lo detiene.
+- Opciones: `--puerto 8080`, `--fuente csv|postgres|auto`, `--red` (visible para otros
+  equipos de tu red local), `--sin-navegador`, `--recarga` (para desarrollo) y
+  `--pruebas` (corre las pruebas del backend).
+
+No necesita Node.js ni Docker. Vue, ECharts y Leaflet están copiados en `frontend/vendor/`
+con su versión y su verificación de integridad (`frontend/vendor/VERSIONES.md`), así que
+la página funciona sin internet; lo único que se pide fuera es el mapa base de
+OpenStreetMap, que se puede apagar desde la propia página.
+
+### De dónde lee los datos
+
+El backend respeta la regla del proyecto: **solo lee el esquema `indicadores`**.
+
+| Modo (`--fuente` u `OBSERVATORIO_FUENTE`) | Qué hace |
+|---|---|
+| `auto` (por omisión) | Si hay `.env` con `TABLERO_PASSWORD` y la base responde, lee PostgreSQL con el rol `tablero`. Si no, reconstruye las nueve tablas de `indicadores` desde `data/curada/` con las mismas reglas que `etl/cargar_capas.py` (columnas, tipos y redondeo). |
+| `postgres` | Solo PostgreSQL; si la base no responde, no arranca. |
+| `csv` | Solo la réplica local. |
+
+Para usar la base: `docker compose up --build -d` (ver arriba) y después `python iniciar.py`.
+En cualquier modo, al arrancar se verifican las mismas cifras de control que el ETL (más
+las del README), y la sección de Metodología muestra la fuente activa y el resultado. Si
+alguna cifra no cuadra, la página lo avisa en una franja roja.
+
+### La API
+
+Documentación interactiva en <http://127.0.0.1:8000/api/docs>. Rutas principales:
+
+| Ruta | Devuelve |
+|---|---|
+| `/api/estado` | Fuente activa y cifras de control |
+| `/api/kpis` | `indicadores.kpi_cdmx` (filtro `?nivel=CDMX` o `Nacional`) |
+| `/api/hallazgos/{nacional,cdmx,alcaldias}` | Hallazgos redactados a partir de los datos, cada uno con fuente y nivel |
+| `/api/enut/carga-actividad`, `/api/enut/brecha`, `/api/enut/doble-jornada` | ENUT 2024 |
+| `/api/enut/cuidado-por-grupo?tipo_grupo=…` | Edad o condición de actividad: el parámetro es obligatorio porque no se mezclan |
+| `/api/enasic` | ENASIC 2022 por tema, con su base (siempre nacional) |
+| `/api/alcaldias`, `/api/alcaldias/{cve_mun}` | Las 16 alcaldías y la ficha de cada una |
+| `/api/agebs`, `/api/establecimientos`, `/api/territorio` | Capas del mapa, embudo y distribución de la carga |
+| `/api/indicadores/{tabla}` y `/api/indicadores/{tabla}.csv` | Cualquiera de las nueve tablas, en JSON o CSV |
+
+Toda respuesta con cifras lleva `fuente` y `nivel_geografico`. Los hallazgos no están
+escritos a mano: se calculan con los datos y respetan las cinco advertencias del
+diccionario de datos (una prueba automática lo verifica).
+
+### Pruebas
+
+```bash
+python iniciar.py --pruebas
+```
+
+Verifican que la réplica reproduce las cifras de control y los tipos del DDL (incluido el
+redondeo de Spark), que la ruta de PostgreSQL produce tablas idénticas, que la API respeta
+las restricciones del diccionario y que el frontend se sirve con los tipos MIME correctos.
+
+### Decisiones de diseño
+
+- **Vue 3 sin paso de compilación.** Las plantillas se compilan en el navegador: no hace
+  falta Node.js para correr ni para modificar el frontend.
+- **Mosaico de alcaldías en lugar de coropletas.** El repositorio no tiene los polígonos
+  del Marco Geoestadístico; el mosaico ubica cada alcaldía en su posición aproximada sin
+  fingir una geografía que no tenemos. Con los polígonos se puede cambiar por coropletas.
+- **Paleta violeta validada.** Mismo perfil de luminosidad que la rampa de referencia de
+  la guía de visualización, verificada para daltonismo y contraste (detalle en
+  `frontend/css/tokens.css`). Cada gráfica tiene su tabla gemela («Ver tabla») y hay tema
+  claro y oscuro.
+
+---
+
 ## Regenerar los datos desde cero
 
 Los CSV de `data/curada/` ya están en el repositorio, así que esto solo hace falta para
@@ -284,9 +384,21 @@ coincide, hay que avisar al equipo antes de seguir:
 
 ```
 .
+├── iniciar.py                   Levanta el observatorio web con un solo comando
 ├── docker-compose.yml           Los dos servicios: db y etl
 ├── .env.example                 Plantilla de credenciales (copiar a .env)
 ├── .gitignore                   Excluye data/raw/, *.zip, .env, checkpoints
+│
+├── backend/                     API del observatorio (FastAPI)
+│   ├── observatorio/            esquema de indicadores, fuentes (PostgreSQL o
+│   │                            réplica del ETL), hallazgos, metodología y rutas
+│   ├── tests/                   Pruebas (pytest)
+│   └── requirements.txt
+├── frontend/                    Página del observatorio (Vue 3 sin compilación)
+│   ├── index.html
+│   ├── css/                     tokens.css (paleta claro/oscuro) y estilos.css
+│   ├── js/                      secciones, componentes y gráficas
+│   └── vendor/                  Vue, ECharts y Leaflet, copiados y verificados
 │
 ├── docker/
 │   └── spark/
@@ -337,3 +449,8 @@ Notion, no en el repositorio.
   `precision_baja` y `confiable` son por ahora un semáforo por tamaño de muestra.
 - PostGIS no está activado. Los conteos a 1 km vienen precalculados en los CSV; cuando se
   integren los polígonos conviene rehacerlos en SQL con `ST_DWithin`.
+- Con los polígonos, el observatorio web puede cambiar el mosaico de alcaldías por un mapa
+  de coropletas y los puntos de las AGEB por sus polígonos.
+- El nivel nacional del observatorio se limita a lo que traen los datos del repositorio
+  (ENUT 2024 nacional y ENASIC 2022). Un desglose por entidad o el valor económico del
+  trabajo no remunerado (Cuenta Satélite del INEGI) requerirían fuentes nuevas.

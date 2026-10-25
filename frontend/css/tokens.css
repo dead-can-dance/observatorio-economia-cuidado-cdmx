@@ -1,0 +1,161 @@
+/* =============================================================================
+   Tokens de color del observatorio, modo claro y oscuro.
+
+   La rampa violeta tiene el mismo perfil de luminosidad que la rampa azul de
+   referencia de la guía de visualización, rotada al tono del violeta documentado
+   (#6250d6, anclado en el paso 500; el acento oscuro #9085e9 se usa tal cual, fuera
+   de la rampa, para no romper la continuidad de croma del paso 350). Se validó con
+   el script de la guía (validate_palette.py):
+     - rampa completa: luminosidad monótona y un solo tono (dispersión de 1°);
+     - acento claro y oscuro: banda de luminosidad, croma y contraste >= 3:1;
+     - rampas ordinales (grupos de edad y embudo): monótonas, saltos de L >= 0.06,
+       extremo claro >= 2:1 contra la superficie, un solo tono;
+     - violeta contra el gris de referencia y segmentos de la doble jornada:
+       ΔE >= 15 en visión normal y >= 8 con protanopía y deuteranopía.
+   Las gráficas leen estos valores con getComputedStyle: no hay colores en el JS.
+   ============================================================================= */
+
+:root {
+  color-scheme: light;
+
+  --violeta-100: #dbdcfe;
+  --violeta-150: #c9cbfe;
+  --violeta-200: #b9bafe;
+  --violeta-250: #a8a8fe;
+  --violeta-300: #9895fd;
+  --violeta-350: #8a82fd;
+  --violeta-400: #7c6cfd;
+  --violeta-450: #6f5bf0;
+  --violeta-500: #6250d6;
+  --violeta-550: #5644c0;
+  --violeta-600: #4a3aa8;
+  --violeta-650: #3e2e92;
+  --violeta-700: #322679;
+
+  --pagina: #f9f9f7;
+  --superficie: #fcfcfb;
+  --superficie-hundida: #f0efec;
+  --tinta-1: #0b0b0b;
+  --tinta-2: #52514e;
+  --tinta-3: #898781;
+  --reticula: #e1e0d9;
+  --eje: #c3c2b7;
+  --borde: rgba(11, 11, 11, 0.10);
+  --borde-fuerte: rgba(11, 11, 11, 0.18);
+  --sombra: 0 1px 2px rgba(11, 11, 11, 0.04), 0 6px 20px rgba(11, 11, 11, 0.05);
+  --velo: rgba(249, 249, 247, 0.86);
+
+  --acento: var(--violeta-500);
+  --acento-texto: var(--violeta-600);
+  --acento-lavado: rgba(98, 80, 214, 0.08);
+  --acento-borde: rgba(98, 80, 214, 0.32);
+  --sobre-acento: #ffffff;
+
+  --referencia: #898781;
+  --critico: #d03b3b;
+  --critico-texto: #b3261e;
+  --critico-lavado: rgba(208, 59, 59, 0.07);
+  --aviso: #fab219;
+  --aviso-lavado: rgba(250, 178, 25, 0.12);
+  --exito-texto: #006300;
+
+  /* Roles de las gráficas */
+  --g-mercado: #c3c2b7;
+  --g-domestico: var(--violeta-300);
+  --g-cuidado: var(--violeta-600);
+  --g-ordinal-1: var(--violeta-250);
+  --g-ordinal-2: var(--violeta-350);
+  --g-ordinal-3: var(--violeta-450);
+  --g-ordinal-4: var(--violeta-550);
+  --g-ordinal-5: var(--violeta-650);
+  --g-embudo-1: var(--violeta-300);
+  --g-embudo-2: var(--violeta-450);
+  --g-embudo-3: var(--violeta-600);
+  --g-embudo-4: var(--violeta-700);
+  --g-pista: var(--violeta-100);
+  --g-sombra-eje: rgba(11, 11, 11, 0.04);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --pagina: #0d0d0d;
+    --superficie: #1a1a19;
+    --superficie-hundida: #232322;
+    --tinta-1: #f0efec;
+    --tinta-2: #c3c2b7;
+    --tinta-3: #898781;
+    --reticula: #2c2c2a;
+    --eje: #383835;
+    --borde: rgba(255, 255, 255, 0.10);
+    --borde-fuerte: rgba(255, 255, 255, 0.18);
+    --sombra: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 20px rgba(0, 0, 0, 0.30);
+    --velo: rgba(13, 13, 13, 0.86);
+    --acento: #9085e9;
+    --acento-texto: var(--violeta-250);
+    --acento-lavado: rgba(144, 133, 233, 0.12);
+    --acento-borde: rgba(144, 133, 233, 0.38);
+    --sobre-acento: #0b0b0b;
+    --referencia: #898781;
+    --critico: #d03b3b;
+    --critico-texto: #f2b8b5;
+    --critico-lavado: rgba(208, 59, 59, 0.14);
+    --aviso-lavado: rgba(250, 178, 25, 0.10);
+    --exito-texto: #0ca30c;
+    --g-mercado: #6b6a64;
+    --g-domestico: var(--violeta-500);
+    --g-cuidado: var(--violeta-200);
+    --g-ordinal-1: var(--violeta-600);
+    --g-ordinal-2: var(--violeta-500);
+    --g-ordinal-3: var(--violeta-400);
+    --g-ordinal-4: var(--violeta-300);
+    --g-ordinal-5: var(--violeta-200);
+    --g-embudo-1: var(--violeta-600);
+    --g-embudo-2: var(--violeta-450);
+    --g-embudo-3: var(--violeta-300);
+    --g-embudo-4: var(--violeta-150);
+    --g-pista: var(--violeta-650);
+    --g-sombra-eje: rgba(255, 255, 255, 0.04);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --pagina: #0d0d0d;
+  --superficie: #1a1a19;
+  --superficie-hundida: #232322;
+  --tinta-1: #f0efec;
+  --tinta-2: #c3c2b7;
+  --tinta-3: #898781;
+  --reticula: #2c2c2a;
+  --eje: #383835;
+  --borde: rgba(255, 255, 255, 0.10);
+  --borde-fuerte: rgba(255, 255, 255, 0.18);
+  --sombra: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 20px rgba(0, 0, 0, 0.30);
+  --velo: rgba(13, 13, 13, 0.86);
+  --acento: #9085e9;
+  --acento-texto: var(--violeta-250);
+  --acento-lavado: rgba(144, 133, 233, 0.12);
+  --acento-borde: rgba(144, 133, 233, 0.38);
+  --sobre-acento: #0b0b0b;
+  --referencia: #898781;
+  --critico: #d03b3b;
+  --critico-texto: #f2b8b5;
+  --critico-lavado: rgba(208, 59, 59, 0.14);
+  --aviso-lavado: rgba(250, 178, 25, 0.10);
+  --exito-texto: #0ca30c;
+  --g-mercado: #6b6a64;
+  --g-domestico: var(--violeta-500);
+  --g-cuidado: var(--violeta-200);
+  --g-ordinal-1: var(--violeta-600);
+  --g-ordinal-2: var(--violeta-500);
+  --g-ordinal-3: var(--violeta-400);
+  --g-ordinal-4: var(--violeta-300);
+  --g-ordinal-5: var(--violeta-200);
+  --g-embudo-1: var(--violeta-600);
+  --g-embudo-2: var(--violeta-450);
+  --g-embudo-3: var(--violeta-300);
+  --g-embudo-4: var(--violeta-150);
+  --g-pista: var(--violeta-650);
+  --g-sombra-eje: rgba(255, 255, 255, 0.04);
+}

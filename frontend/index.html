@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Observatorio de la Economía del Cuidado</title>
+  <meta name="description" content="El trabajo de cuidado no remunerado de las mujeres en México y en la Ciudad de México, por alcaldía y por AGEB. Datos del INEGI: ENUT 2024, ENASIC 2022, Censo 2020 y DENUE.">
+  <link rel="icon" href="img/icono.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/estilos.css">
+  <script>
+    // El tema elegido se aplica antes de pintar, para no destellar en el tema contrario.
+    try {
+      var t = localStorage.getItem('observatorio-tema');
+      if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    } catch (e) { /* almacenamiento bloqueado: se sigue la preferencia del sistema */ }
+  </script>
+  <script type="importmap">
+    { "imports": { "vue": "./vendor/vue.esm-browser.prod.js" } }
+  </script>
+  <script src="vendor/echarts.min.js"></script>
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+  <div id="app">
+    <div class="cargando-inicial" role="status">Cargando el observatorio…</div>
+    <noscript>
+      <div class="error-carga"><div class="tarjeta">
+        <h2>Este observatorio necesita JavaScript</h2>
+        <p>Actívalo en el navegador. Los datos también se pueden consultar directamente en la API: <a href="/api/docs">/api/docs</a>.</p>
+      </div></div>
+    </noscript>
+  </div>
+</body>
+</html>

@@ -1,4 +1,8 @@
-"""Las nueve tablas del esquema `indicadores`, tal como las define sql/01_esquemas.sql.
+"""Las quince tablas del esquema `indicadores`, tal como las define sql/01_esquemas.sql.
+
+Nueve son el diagnóstico descriptivo (notebook 02) y seis la capa analítica del trabajo
+integrador (notebook 03): serie histórica de la oferta, pronóstico, validación de modelos,
+coeficientes del modelo de horas de cuidado, horas por AGEB y escenarios del programa.
 
 Es el contrato entre el backend y sus dos fuentes posibles (PostgreSQL o los CSV de
 data/curada/): cualquiera de las dos debe entregar exactamente estas columnas, con
@@ -48,6 +52,13 @@ TEMAS_ENASIC = [
     'Búsqueda de servicios', 'Razones para no buscar',
     'Preferencia de cuidado', 'Disposición a cuidar',
 ]
+TIPOS_RESPALDO = ['Guardería', 'Residencia / asilo', 'Centro de día']
+SERIES_OFERTA = ['Total de respaldo'] + TIPOS_RESPALDO
+METODOS_PRONOSTICO = ['Ingenuo', 'Suavizamiento simple', 'Holt amortiguado', 'Deriva', 'ARIMA(0,1,1)']
+METRICAS = ['MAPE', 'RMSE', 'MAE', 'R2']
+VARIABLES_MODELO = ['constante', 'n_0a5', 'n_6a14', 'n_60mas', 'n_disc', 'tam', 'edad_15a24',
+                    'edad_50a59', 'ocupada', 'anios_esc', 'jefa_hog', 'urbana']
+ESCENARIOS_PROGRAMA = ['Pesimista', 'Realista', 'Optimista', 'Valor esperado', 'Zona del programa']
 
 TABLAS = {
     'kpi_cdmx': {
@@ -153,6 +164,65 @@ TABLAS = {
         'orden_desc': 'pct',
         'filas': 19,
     },
+    # --- Capa analítica (notebook 03): serie histórica, pronóstico, modelo y escenarios ---
+    'oferta_historica': {
+        'columnas': [
+            ('edicion', TEXTO), ('periodo', TEXTO), ('tipo', TEXTO), ('sector', TEXTO),
+            ('establecimientos', ENTERO), *_CONTEXTO,
+        ],
+        'llave': ['edicion', 'tipo', 'sector'],
+        'orden': {'tipo': TIPOS_RESPALDO, 'sector': ['Privado', 'Público']},
+        'orden_primero': ['edicion'],
+        'filas': 114,
+    },
+    'pronostico_oferta': {
+        'columnas': [
+            ('serie', TEXTO), ('metodo', TEXTO), ('periodo', TEXTO), ('horizonte', ENTERO),
+            ('pronostico', DECIMAL), ('li_80', DECIMAL), ('ls_80', DECIMAL),
+            ('li_95', DECIMAL), ('ls_95', DECIMAL), ('elegido', BOOLEANO), *_CONTEXTO,
+        ],
+        'llave': ['serie', 'metodo', 'periodo'],
+        'orden': {'serie': SERIES_OFERTA, 'metodo': METODOS_PRONOSTICO},
+        'filas': 60,
+    },
+    'validacion_modelos': {
+        'columnas': [
+            ('modelo', TEXTO), ('tarea', TEXTO), ('conjunto', TEXTO), ('metrica', TEXTO),
+            ('valor', DECIMAL), ('n_evaluaciones', ENTERO), ('elegido', BOOLEANO), *_CONTEXTO,
+        ],
+        'llave': ['tarea', 'conjunto', 'modelo', 'metrica'],
+        'orden': {'metrica': METRICAS},
+        'orden_primero': ['tarea', 'conjunto', 'modelo'],
+        'filas': 56,
+    },
+    'modelo_horas_coeficientes': {
+        'columnas': [
+            ('variable', TEXTO), ('descripcion', TEXTO), ('coeficiente', DECIMAL),
+            ('variable_censo', TEXTO), *_CONTEXTO,
+        ],
+        'llave': ['variable'],
+        'orden': {'variable': VARIABLES_MODELO},
+        'filas': 12,
+    },
+    'horas_cuidado_ageb': {
+        'columnas': [
+            ('cvegeo_ageb', TEXTO), ('cve_mun', TEXTO), ('alcaldia', TEXTO),
+            ('mujeres_15a59', ENTERO), ('horas_mujer_semana', DECIMAL),
+            ('horas_semana_total', ENTERO), ('alta_carga', BOOLEANO), ('sin_respaldo', BOOLEANO),
+            ('variables_imputadas', BOOLEANO), *_CONTEXTO,
+        ],
+        'llave': ['cvegeo_ageb'],
+        'filas': 2320,
+    },
+    'escenarios_programa': {
+        'columnas': [
+            ('escenario', TEXTO), ('indicador', TEXTO), ('valor', DECIMAL), ('unidad', TEXTO),
+            *_CONTEXTO,
+        ],
+        'llave': ['escenario', 'indicador'],
+        'orden': {'escenario': ESCENARIOS_PROGRAMA},
+        'filas': 74,
+    },
 }
 
 
@@ -202,8 +272,9 @@ def normalizar(tabla, df):
     datos = {c: _serie(df[c].tolist(), tipo) for c, tipo in definicion['columnas']}
     salida = pd.DataFrame(datos)
 
-    # Orden determinista: primero las categorías con orden natural, luego la llave.
-    claves_orden = []
+    # Orden determinista: primero las columnas de `orden_primero` (p. ej. la edición del
+    # DENUE), luego las categorías con orden natural y al final la llave.
+    claves_orden = list(definicion.get('orden_primero', []))
     for col, categorias in definicion.get('orden', {}).items():
         posicion = {c: i for i, c in enumerate(categorias)}
         aux = f'_orden_{col}'

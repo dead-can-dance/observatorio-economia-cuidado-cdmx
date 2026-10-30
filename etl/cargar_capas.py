@@ -243,11 +243,18 @@ ARCHIVOS_CRUDA = [
     'mujeres_enut_carga_cdmx',
     'mujeres_zonas_sin_respaldo_alcaldia',
     'resumen_cifras_clave',
+    # Capa analítica del notebook 03 (serie histórica, pronóstico, modelo, escenarios).
+    'denue_oferta_historica',
+    'pronostico_oferta_cdmx',
+    'validacion_modelos',
+    'modelo_horas_coeficientes',
+    'horas_cuidado_ageb',
+    'escenarios_programa',
 ]
 
 
 def cargar_cruda(spark):
-    """Vuelca los 18 CSV al esquema `cruda`, sin tocar un solo valor.
+    """Vuelca los 24 CSV al esquema `cruda`, sin tocar un solo valor.
 
     Devuelve un diccionario con los DataFrames ya leídos, para que las capas
     siguientes construyan sobre ellos y no vuelvan a leer disco.
@@ -421,7 +428,7 @@ CLAVE_BRECHA_NO_PAGADO = ('ENUT · brecha de trabajo no pagado, '
 
 
 def cargar_indicadores(spark, dfs, cur):
-    """Construye las nueve tablas del esquema `indicadores`.
+    """Construye las quince tablas del esquema `indicadores`.
 
     Todas llevan nivel_geografico y fuente. No son adorno: impiden que alguien
     ponga en un mapa de la CDMX una cifra de la ENASIC, que es nacional.
@@ -681,6 +688,47 @@ def cargar_indicadores(spark, dfs, cur):
         enasic = enasic.unionByName(p)
     escribir(spark, enasic, 'indicadores.enasic_cuidadoras')
 
+    # -- 5.10 Capa analítica (notebook 03) ------------------------------------------
+    # Los CSV ya traen la forma final de cada tabla; aquí solo se tipan y redondean.
+    # Mismas reglas que backend/observatorio/fuente_csv.py.
+    contexto = [F.col('nivel_geografico'), F.col('fuente')]
+
+    oferta = tabla_cruda(dfs, 'denue_oferta_historica').select(
+        'edicion', 'periodo', 'tipo', 'sector',
+        entero('establecimientos').alias('establecimientos'), *contexto)
+    escribir(spark, oferta, 'indicadores.oferta_historica')
+
+    pron = tabla_cruda(dfs, 'pronostico_oferta_cdmx').select(
+        'serie', 'metodo', 'periodo', entero('horizonte').alias('horizonte'),
+        *[tasa(c, enteros=8).alias(c) for c in ('pronostico', 'li_80', 'ls_80', 'li_95', 'ls_95')],
+        booleano('elegido').alias('elegido'), *contexto)
+    escribir(spark, pron, 'indicadores.pronostico_oferta')
+
+    val = tabla_cruda(dfs, 'validacion_modelos').select(
+        'modelo', 'tarea', 'conjunto', 'metrica',
+        tasa('valor', enteros=12, decimales=3).alias('valor'),
+        entero('n_evaluaciones').alias('n_evaluaciones'),
+        booleano('elegido').alias('elegido'), *contexto)
+    escribir(spark, val, 'indicadores.validacion_modelos')
+
+    coef = tabla_cruda(dfs, 'modelo_horas_coeficientes').select(
+        'variable', 'descripcion', tasa('coeficiente', enteros=8, decimales=3).alias('coeficiente'),
+        'variable_censo', *contexto)
+    escribir(spark, coef, 'indicadores.modelo_horas_coeficientes')
+
+    horas = tabla_cruda(dfs, 'horas_cuidado_ageb').select(
+        'cvegeo_ageb', 'cve_mun', 'alcaldia', entero('mujeres_15a59').alias('mujeres_15a59'),
+        tasa('horas_mujer_semana').alias('horas_mujer_semana'),
+        entero('horas_semana_total').alias('horas_semana_total'),
+        booleano('alta_carga').alias('alta_carga'), booleano('sin_respaldo').alias('sin_respaldo'),
+        booleano('variables_imputadas').alias('variables_imputadas'), *contexto)
+    escribir(spark, horas, 'indicadores.horas_cuidado_ageb')
+
+    esc = tabla_cruda(dfs, 'escenarios_programa').select(
+        'escenario', 'indicador', tasa('valor', enteros=14, decimales=2).alias('valor'),
+        'unidad', *contexto)
+    escribir(spark, esc, 'indicadores.escenarios_programa')
+
 
 # =============================================================================
 # 6. REPORTE DE CONTROL
@@ -703,6 +751,10 @@ CONTROLES = [
     ('Brecha ENUT de trabajo no pagado (h)',
      "SELECT valor_num::text FROM indicadores.kpi_cdmx "
      f"WHERE clave = '{CLAVE_BRECHA_NO_PAGADO}'", '12.7'),
+    # La serie histórica del DENUE debe cerrar en el mismo número que la tabla de
+    # establecimientos de la edición actual: si no, los dos conteos usan reglas distintas.
+    ('Respaldo DENUE 05/2026 en la serie histórica',
+     "SELECT sum(establecimientos)::int FROM indicadores.oferta_historica WHERE edicion = '2026-05'", 838),
 ]
 
 
@@ -756,7 +808,10 @@ TABLAS_DESTINO = (
      'indicadores.carga_ageb', 'indicadores.establecimientos_cuidado',
      'indicadores.enut_carga_actividad', 'indicadores.enut_brecha_mujeres_cdmx',
      'indicadores.enut_doble_jornada', 'indicadores.enut_cuidado_por_grupo',
-     'indicadores.enasic_cuidadoras']
+     'indicadores.enasic_cuidadoras', 'indicadores.oferta_historica',
+     'indicadores.pronostico_oferta', 'indicadores.validacion_modelos',
+     'indicadores.modelo_horas_coeficientes', 'indicadores.horas_cuidado_ageb',
+     'indicadores.escenarios_programa']
 )
 
 

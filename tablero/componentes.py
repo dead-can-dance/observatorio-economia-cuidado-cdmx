@@ -125,6 +125,40 @@ def indicadores(items):
             f'{"".join(_tile(**i) for i in items)}</div>')
 
 
+ESTADOS = {'ok': ('obs-estado--ok', '●', 'En meta'), 'aviso': ('obs-estado--aviso', '▲', 'Vigilar'),
+           'critico': ('obs-estado--critico', '■', 'Fuera de meta')}
+
+
+def kpis_con_meta(items):
+    """Tarjetas de KPI con su meta o referencia y un estado (forma + texto, no solo color).
+
+    items: dicts con etiqueta, valor, meta, estado ('ok' | 'aviso' | 'critico'), nivel, fuente
+    y, opcional, exploratorio y simulado.
+    """
+    tarjetas = []
+    for i in items:
+        clase, forma, texto = ESTADOS[i['estado']]
+        niveles = insignias(i['nivel'], i.get('exploratorio', False))
+        if i.get('simulado'):
+            niveles += '<span class="obs-insignia obs-insignia--exploratorio">Simulado</span>'
+        tarjetas.append(
+            f'<div class="obs-tarjeta"><p class="obs-tile-etiqueta">{esc(i["etiqueta"])}</p>'
+            f'<p class="obs-tile-valor">{esc(i["valor"])}</p>'
+            f'<p class="obs-tile-contexto">{esc(i["meta"])}</p>'
+            f'<p class="obs-estado {clase}"><span aria-hidden="true">{forma}</span> {esc(texto)}'
+            f'{(" · " + esc(i["detalle_estado"])) if i.get("detalle_estado") else ""}</p>'
+            f'<div class="obs-tile-pie">{niveles}<span>{esc(i["fuente"])}</span></div></div>')
+    st.html(f'<div class="obs-rejilla" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">'
+            f'{"".join(tarjetas)}</div>')
+
+
+def f_cambio(v, decimales=0):
+    """Cambio porcentual con signo tipográfico: +37 % o −37 %."""
+    if vacio(v):
+        return '—'
+    return f'{"−" if v < 0 else "+"}{analisis.num(abs(v), decimales)}{NBSP}%'
+
+
 def hallazgos(lista):
     if not lista:
         return

@@ -4,14 +4,21 @@ respeta las advertencias del diccionario de datos.
     python -m pytest tablero/tests -q      (o: python iniciar.py --pruebas)
 """
 
+import sys
 from pathlib import Path
 
 import pytest
 from streamlit.testing.v1 import AppTest
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'backend'))
+from observatorio import esquema, repositorio  # noqa: E402
+
+# Cifras de control más un conteo de filas por cada tabla de `indicadores`.
+TOTAL_CONTROLES = len(repositorio.CONTROLES) + len(esquema.TABLAS)
+
 APP = str(Path(__file__).resolve().parents[1] / 'app.py')
 PAGINAS = ['paginas/inicio.py', 'paginas/mexico.py', 'paginas/cdmx.py', 'paginas/alcaldias.py',
-           'paginas/territorio.py', 'paginas/metodologia.py']
+           'paginas/territorio.py', 'paginas/decision.py', 'paginas/metodologia.py']
 
 
 def abrir(pagina=None, **estado):
@@ -83,4 +90,20 @@ def test_territorio_de_toda_la_ciudad():
 
 def test_cifras_de_control_cuadran():
     at = abrir('paginas/metodologia.py')
-    assert any('(18 de 18)' in s.value for s in at.success)
+    assert any(f'({TOTAL_CONTROLES} de {TOTAL_CONTROLES})' in s.value for s in at.success)
+
+
+def test_decision_muestra_kpis_con_meta_y_recomendacion():
+    t = texto(abrir('paginas/decision.py'))
+    assert '838' in t and '1,337' in t, 'la oferta de 2026 contra la de 2016'
+    assert 'Escenario simulado' in t
+    assert 'Fuera de meta' in t and 'En meta' in t, 'los KPI llevan estado con texto, no solo color'
+    assert 'invertir por etapas' in t
+    assert '$38.01' in t, 'subsidio de equilibrio leído de indicadores.escenarios_programa'
+
+
+def test_simulador_responde_al_subsidio():
+    at = abrir('paginas/decision.py')
+    at.slider(key='sim_sub').set_value(20).run()
+    assert not at.exception
+    assert 'Se cierra en el mes 12' in texto(at), 'con $20 por hora el programa no llega a la mitad del equilibrio'

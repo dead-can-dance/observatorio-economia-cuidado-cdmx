@@ -1,7 +1,7 @@
-"""Datos de la app: las nueve tablas del esquema `indicadores`, cargadas una sola vez.
+"""Datos de la app: las quince tablas del esquema `indicadores`, cargadas una sola vez.
 
 Reutiliza el backend del observatorio web (backend/observatorio): la misma réplica del
-ETL, las mismas 18 cifras de control y los mismos hallazgos redactados. Así la app de
+ETL, las mismas cifras de control y los mismos hallazgos redactados. Así la app de
 Streamlit y la página web no pueden contar cosas distintas.
 
 En Streamlit Community Cloud no hay .env ni PostgreSQL: las tablas se reconstruyen desde
@@ -18,7 +18,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 if str(RAIZ / 'backend') not in sys.path:
     sys.path.insert(0, str(RAIZ / 'backend'))
 
-from observatorio import analisis, metodologia  # noqa: E402
+from observatorio import analisis, factibilidad, metodologia  # noqa: E402,F401
 from observatorio.configuracion import cargar_configuracion  # noqa: E402
 from observatorio.esquema import TABLAS, TEMAS_ENASIC  # noqa: E402,F401
 from observatorio.fuente_csv import CLAVE_BRECHA_NO_PAGADO  # noqa: E402

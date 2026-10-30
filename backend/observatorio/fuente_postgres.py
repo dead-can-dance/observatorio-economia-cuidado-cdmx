@@ -15,7 +15,7 @@ class BaseNoDisponible(RuntimeError):
 
 
 def leer(cfg):
-    """Devuelve las nueve tablas de `indicadores` como DataFrames (sin normalizar)."""
+    """Devuelve las quince tablas de `indicadores` como DataFrames (sin normalizar)."""
     try:
         import psycopg
         from psycopg import sql

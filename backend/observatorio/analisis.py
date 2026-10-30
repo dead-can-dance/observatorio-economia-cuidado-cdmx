@@ -1,7 +1,7 @@
 """Hallazgos e indicadores derivados para el tablero.
 
 Todo se calcula a partir de las tablas de `indicadores`, nunca de `cruda` ni `curada`,
-y respeta las cinco advertencias de docs/diccionario_datos.md ("Cómo NO leer estos datos"):
+y respeta las advertencias de docs/diccionario_datos.md ("Cómo NO leer estos datos"):
 
   1. El DENUE cuenta establecimientos, no lugares: se habla de presión sobre la oferta,
      nunca de cobertura.

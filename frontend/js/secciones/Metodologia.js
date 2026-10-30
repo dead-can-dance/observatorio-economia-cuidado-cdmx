@@ -45,7 +45,7 @@ export default {
         <div>
           <p class="seccion__escala">Método</p>
           <h2 class="seccion__titulo" id="titulo-metodologia">Cómo leer (y cómo no leer) estos datos</h2>
-          <p class="seccion__entrada">Cinco advertencias que respeta cada gráfica y cada texto de este observatorio.
+          <p class="seccion__entrada">Siete advertencias que respeta cada gráfica y cada texto de este observatorio.
             Vienen del diccionario de datos del proyecto (<code>docs/diccionario_datos.md</code>).</p>
         </div>
       </header>
@@ -79,7 +79,7 @@ export default {
 
       <div class="subtitulo-bloque">
         <h3>Descarga los datos</h3>
-        <p>Las nueve tablas del esquema <code>indicadores</code>, que son las únicas que lee este observatorio. También
+        <p>Las quince tablas del esquema <code>indicadores</code>, que son las únicas que lee este observatorio. También
           están en la API, documentada en <a href="/api/docs">/api/docs</a>.</p>
       </div>
       <ul class="descargas">

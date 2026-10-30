@@ -126,6 +126,19 @@ CSS = f"""
 .obs-ficha-cifras span {{ font-size: .82rem; opacity: .8; }}
 .obs-ficha-cifras strong {{ font-size: 1.5rem; font-variant-numeric: tabular-nums; }}
 .obs-ficha-cifras small {{ font-size: .78rem; opacity: .72; }}
+.obs-estado {{ margin: 2px 0 0; font-size: .82rem; font-weight: 600; display: inline-flex; gap: 6px;
+  align-items: center; padding: 2px 9px; border-radius: 999px; width: fit-content; }}
+.obs-estado--ok {{ background: rgba(0,140,70,.13); }}
+.obs-estado--ok span {{ color: #1e8a4c; }}
+.obs-estado--aviso {{ background: rgba(250,178,25,.18); }}
+.obs-estado--aviso span {{ color: #b07800; }}
+.obs-estado--critico {{ background: rgba(208,59,59,.13); }}
+.obs-estado--critico span {{ color: {CRITICO}; }}
+.obs-decision {{ border: 1px solid rgba(111,91,240,.55); border-radius: 14px; padding: 18px 22px;
+  background: rgba(111,91,240,.07); }}
+.obs-decision h4 {{ margin: 0 0 6px; font-size: 1.15rem; padding: 0; }}
+.obs-decision ol {{ margin: 6px 0 0; padding-left: 1.2em; }}
+.obs-decision li {{ margin: 3px 0; }}
 .obs-pie {{ margin-top: 48px; padding-top: 14px; border-top: 1px solid rgba(128,128,128,.28);
   font-size: .8rem; opacity: .75; }}
 @media (max-width: 640px) {{

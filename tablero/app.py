@@ -3,7 +3,8 @@
     streamlit run tablero/app.py        (o: python iniciar.py --streamlit)
 
 Es la misma historia que la página web (frontend/), de lo general a lo particular:
-México, Ciudad de México, alcaldías y AGEB, más la metodología. Lee solo el esquema
+México, Ciudad de México, alcaldías y AGEB, más la metodología. La página «Decisión» agrega
+la capa analítica del trabajo integrador: pronóstico, modelo y escenarios del programa. Lee solo el esquema
 `indicadores`, a través del backend del observatorio (ver tablero/datos.py).
 """
 
@@ -28,6 +29,7 @@ paginas = [
     st.Page('paginas/cdmx.py', title='Ciudad de México', icon=':material/location_city:', url_path='cdmx'),
     st.Page('paginas/alcaldias.py', title='Alcaldías', icon=':material/grid_view:', url_path='alcaldias'),
     st.Page('paginas/territorio.py', title='Territorio', icon=':material/map:', url_path='territorio'),
+    st.Page('paginas/decision.py', title='Decisión', icon=':material/insights:', url_path='decision'),
     st.Page('paginas/metodologia.py', title='Metodología', icon=':material/menu_book:', url_path='metodologia'),
 ]
 pagina = st.navigation(paginas, position='top')

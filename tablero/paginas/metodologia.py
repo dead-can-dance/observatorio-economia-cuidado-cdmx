@@ -17,12 +17,18 @@ DESCRIPCION_TABLAS = {
     'enut_doble_jornada': 'ENUT: doble jornada',
     'enut_cuidado_por_grupo': 'ENUT: qué mujeres cuidan más',
     'enasic_cuidadoras': 'ENASIC: cuidadoras y servicios (nacional)',
+    'oferta_historica': 'DENUE 2016-2026: oferta de respaldo por edición',
+    'pronostico_oferta': 'Pronóstico de la oferta de respaldo',
+    'validacion_modelos': 'Métricas de validación de los modelos',
+    'modelo_horas_coeficientes': 'Coeficientes del modelo de horas de cuidado',
+    'horas_cuidado_ageb': 'Horas de cuidado estimadas por AGEB',
+    'escenarios_programa': 'Escenarios del programa (simulado)',
 }
 
 m = d.metodologia
 st.html('<p class="obs-escala">Método</p>')
 st.title('Cómo leer (y cómo no leer) estos datos', anchor=False)
-st.markdown('Cinco advertencias que respeta cada gráfica y cada texto de este observatorio. Vienen del diccionario '
+st.markdown('Siete advertencias que respeta cada gráfica y cada texto de este observatorio. Vienen del diccionario '
             'de datos del proyecto (`docs/diccionario_datos.md`).')
 
 tarjetas = ''.join(
@@ -50,7 +56,7 @@ for g in m.GLOSARIO:
     st.markdown(f'**{g["termino"]}.** {g["definicion"]}')
 
 st.space('medium')
-c.subtitulo('Descarga los datos', 'Las nueve tablas del esquema `indicadores`, que son las únicas que lee este '
+c.subtitulo('Descarga los datos', 'Las quince tablas del esquema `indicadores`, que son las únicas que lee este '
             'observatorio. Los CSV abren bien en Excel (con acentos).')
 repo = d.repositorio()
 with st.container(horizontal=True, gap='small'):

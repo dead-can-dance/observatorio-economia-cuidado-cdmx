@@ -1,5 +1,5 @@
 # Datos crudos del INEGI: ~175 MB, se bajan con `python etl/descargar_datos.py`.
-# Las tablas de data/curada/ SÍ se versionan (1.5 MB) para poder levantar el repo sin descargar nada.
+# Las tablas de data/curada/ SÍ se versionan (1.9 MB) para poder levantar el repo sin descargar nada.
 data/raw/
 *.zip
 

@@ -1,0 +1,48 @@
+name: web-pages
+
+# Compila la app de Flutter para web y la publica en GitHub Pages.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+        working-directory: mobile
+      - run: flutter create . --platforms web
+        working-directory: mobile
+      - run: >
+          flutter build web --release
+          --base-href /cuidared/
+          --dart-define=API_URL=https://cuidared-api.onrender.com
+        working-directory: mobile
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: mobile/build/web
+
+  publicar:
+    needs: construir
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - id: despliegue
+        uses: actions/deploy-pages@v4

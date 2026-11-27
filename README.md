@@ -17,6 +17,11 @@ DENUE y su pronóstico, un modelo que estima las horas de cuidado por AGEB y la 
 financiera de una red de cuidado a domicilio en Iztapalapa (escenario simulado). Ver
 [Capa analítica: del dato a la decisión](#capa-analítica-del-dato-a-la-decisión).
 
+El tercer componente es **CuidaRed**, el programa social: una app móvil (Flutter) con su
+API (FastAPI) que vincula a familias que necesitan cuidado con cuidadoras de su misma
+zona. Vive en `programa-social/cuidared/`; ver
+[Programa social: CuidaRed](#programa-social-cuidared).
+
 > **Inicio rápido del observatorio:** `python iniciar.py` y se abre en
 > <http://127.0.0.1:8000>. Solo necesita Python 3.10+; ver
 > [El observatorio web](#el-observatorio-web-fase-4).
@@ -520,6 +525,10 @@ coincide, hay que avisar al equipo antes de seguir:
 │
 ├── figuras/                     Gráficas generadas por los notebooks
 │
+├── programa-social/
+│   └── cuidared/                CuidaRed: app Flutter (mobile/), API FastAPI
+│                                (backend/), documentación y evidencias (docs/)
+│
 └── docs/
     ├── diccionario_datos.md     Las 15 tablas de indicadores, columna por columna,
     │                            y la sección "Cómo NO leer estos datos"
@@ -553,6 +562,47 @@ simulado** (ver advertencia 7 del diccionario).
 
 ---
 
+## Programa social: CuidaRed
+
+Es la parte del proyecto que **actúa** sobre lo que el observatorio mide: una plataforma que
+vincula a familias que necesitan cuidado («Necesito cuidado») con cuidadoras de su misma
+zona («Puedo cuidar»), y que registra las horas y el pago del servicio. Es un proyecto
+independiente dentro del repositorio, con su propio README, sus pruebas y su
+`docker-compose.yml`; no comparte código ni base de datos con el observatorio.
+
+| Parte | Dónde | Qué hace |
+|---|---|---|
+| App móvil | `programa-social/cuidared/mobile/` | Flutter (Android, iOS y web). Registro por perfil, tarjetas para deslizar con el puntaje de compatibilidad, vinculaciones y seguimiento de horas. |
+| API | `programa-social/cuidared/backend/` | FastAPI + PostgreSQL. Autenticación con JWT, contraseñas con scrypt y contacto oculto hasta que hay vinculación. |
+| Documentación | `programa-social/cuidared/docs/` | Alcance del MVP, modelo de datos, reglas del matching, seguimiento de horas y capturas de evidencia. |
+
+**El matching** usa reglas transparentes de 0 a 100 puntos, no un modelo entrenado: tipo de
+cuidado (filtro + 20), zona (misma AGEB 40, misma alcaldía 25) y precio (40 si la tarifa cabe
+en el presupuesto, 25 si solo se traslapa). Ver `programa-social/cuidared/docs/03-matching.md`.
+
+**Cómo se conecta con el observatorio:** la variable `AGEBS_PRIORITARIAS` recibe claves AGEB
+del observatorio (por ejemplo, las 88 de alta carga sin respaldo) y marca como prioritarias
+las solicitudes que vienen de ellas.
+
+**Cómo probarlo** (detalle en `programa-social/cuidared/README.md`):
+
+```bash
+cd programa-social/cuidared
+cp .env.example .env
+docker compose up --build          # API en http://localhost:8000/docs
+cd backend && pytest               # 49 pruebas
+```
+
+Su base de datos usa el **puerto 5432, el mismo que la del observatorio**: no levantes los dos
+`docker compose` a la vez (o cambia el puerto en uno de ellos).
+
+Versión publicada: [app web](https://karenitzelsanchez41-rgb.github.io/cuidared/) y
+[API](https://cuidared-api.onrender.com/docs), desplegadas desde el repositorio de trabajo de
+la app. Los workflows de `programa-social/cuidared/.github/` corren allá; GitHub solo
+ejecuta los de la raíz de este repositorio.
+
+---
+
 ## Documentos relacionados
 
 - **`docs/diccionario_datos.md`** — qué hay en cada tabla de `indicadores` y las siete
@@ -579,8 +629,15 @@ Notion, no en el repositorio.
   microdatos del Censo (muestra ampliada) se podría estimar por municipio con menos supuestos.
 - El pronóstico de la oferta no incorpora los 300 Centros de Cuidado Infantil anunciados por
   la CDMX en 09/2026. Cuando aparezcan en el DENUE habrá que volver a correr el notebook 03.
-- La plataforma de vinculación (*matching*) del programa la desarrolla otra parte del equipo;
-  la factibilidad solo incluye sus costos.
+- **CuidaRed y el modelo financiero todavía no usan la misma regla de precio.** En la app,
+  cada cuidadora define su rango de tarifa y la tarifa acordada es el punto medio del
+  traslape con el presupuesto de la familia; el modelo financiero (`factibilidad.py`) supone
+  una tarifa social de $100 por hora ($60 de copago + $40 de subsidio público). Falta que la
+  app modele el subsidio, o que la tarifa social se fije como el rango de las cuidadoras de la
+  red.
+- CuidaRed tiene pendientes en su propio README los pasos de pruebas de privacidad y
+  documentación final. En producción, la API debe correr con un `SECRET_KEY` largo y
+  aleatorio, nunca con el valor de desarrollo.
 - El nivel nacional del observatorio se limita a lo que traen los datos del repositorio
   (ENUT 2024 nacional y ENASIC 2022). Un desglose por entidad o el valor económico del
   trabajo no remunerado (Cuenta Satélite del INEGI) requerirían fuentes nuevas.

@@ -77,6 +77,39 @@ def territorio(cve_mun=None):
     return {**analisis.resumen_agebs(repo, cve_mun), **analisis.histograma_carga(repo, cve_mun)}
 
 
+def _valor_escenario(esc, escenario, indicador):
+    fila = esc[(esc['escenario'] == escenario) & (esc['indicador'] == indicador)]
+    return None if fila.empty or pd.isna(fila['valor'].iloc[0]) else float(fila['valor'].iloc[0])
+
+
+@st.cache_data(show_spinner=False)
+def resumen_decision():
+    """Cifras de cabecera de la página Decisión. Las usan Decisión y el Inicio, así que las dos
+    páginas no pueden contar cosas distintas.
+
+    La oferta y las horas de cuidado son datos del observatorio; las familias, el VAN y el
+    subsidio salen del escenario simulado del programa (indicadores.escenarios_programa).
+    """
+    total_ed = tabla('oferta_historica').groupby('edicion')['establecimientos'].sum()
+    horas = tabla('horas_cuidado_ageb')
+    sin = horas[horas['sin_respaldo'].fillna(False)]
+    horas_sin = float(sin['horas_semana_total'].sum())
+    esc = tabla('escenarios_programa')
+    return {
+        'oferta_hoy': int(total_ed.loc['2026-05']),
+        'oferta_2016': int(total_ed.loc['2016-01']),
+        'horas_sin_respaldo': horas_sin,
+        'horas_mujer_sin_respaldo': horas_sin / float(sin['mujeres_15a59'].sum()),
+        'horas_mujer_ciudad': float(horas['horas_semana_total'].sum()) / float(horas['mujeres_15a59'].sum()),
+        'familias_estable': _valor_escenario(esc, 'Realista', 'Familias atendidas en estado estable'),
+        'punto_equilibrio': _valor_escenario(esc, 'Realista', 'Punto de equilibrio en familias'),
+        'van_esperado_etapas': _valor_escenario(esc, 'Valor esperado', 'VAN con revisión en el mes 12'),
+        'van_realista': _valor_escenario(esc, 'Realista', 'VAN'),
+        'subsidio_equilibrio': _valor_escenario(esc, 'Zona del programa', 'Subsidio mínimo para VAN ≥ 0 (realista)'),
+        'subsidio_supuesto': _valor_escenario(esc, 'Realista', 'Supuesto: Subsidio público por hora'),
+    }
+
+
 def alcaldias_alfabetico():
     alc = tabla('resumen_alcaldia')
     # Sin acentos para ordenar: Álvaro Obregón va con la A, no al final.

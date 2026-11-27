@@ -45,25 +45,15 @@ def tir(v):
 
 # --- Datos -----------------------------------------------------------------------------------
 hist = d.tabla('oferta_historica')
-total_ed = hist.groupby('edicion')['establecimientos'].sum()
-oferta_hoy, oferta_2016 = int(total_ed.loc['2026-05']), int(total_ed.loc['2016-01'])
 horas = d.tabla('horas_cuidado_ageb')
-sin = horas[horas['sin_respaldo'].fillna(False)]
-horas_sin = float(sin['horas_semana_total'].sum())
-hm_sin = horas_sin / float(sin['mujeres_15a59'].sum())
-hm_ciudad = float(horas['horas_semana_total'].sum()) / float(horas['mujeres_15a59'].sum())
-esc = d.tabla('escenarios_programa')
-
-
-def valor(escenario, indicador):
-    fila = esc[(esc['escenario'] == escenario) & (esc['indicador'] == indicador)]
-    return None if fila.empty or pd.isna(fila['valor'].iloc[0]) else float(fila['valor'].iloc[0])
-
-
-fam_real, pe_fam = valor('Realista', 'Familias atendidas en estado estable'), valor('Realista', 'Punto de equilibrio en familias')
-ve_rev, van_real = valor('Valor esperado', 'VAN con revisión en el mes 12'), valor('Realista', 'VAN')
-sub_eq = valor('Zona del programa', 'Subsidio mínimo para VAN ≥ 0 (realista)')
-sub_real = valor('Realista', 'Supuesto: Subsidio público por hora')
+# Cifras de cabecera: el mismo cálculo que adelanta el Inicio (tablero/datos.py).
+resumen = d.resumen_decision()
+oferta_hoy, oferta_2016 = resumen['oferta_hoy'], resumen['oferta_2016']
+horas_sin, hm_sin, hm_ciudad = (resumen['horas_sin_respaldo'], resumen['horas_mujer_sin_respaldo'],
+                                resumen['horas_mujer_ciudad'])
+fam_real, pe_fam = resumen['familias_estable'], resumen['punto_equilibrio']
+ve_rev, van_real = resumen['van_esperado_etapas'], resumen['van_realista']
+sub_eq, sub_real = resumen['subsidio_equilibrio'], resumen['subsidio_supuesto']
 
 # --- Encabezado y KPIs ------------------------------------------------------------------------
 c.encabezado(

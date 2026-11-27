@@ -1,0 +1,5 @@
+# Dependencias de la app de Streamlit (tablero/app.py).
+# Streamlit Community Cloud instala este archivo porque está junto al archivo principal.
+# pandas se queda en 2.x, igual que el backend y los notebooks.
+streamlit==1.65.0
+pandas>=2.2.3,<3

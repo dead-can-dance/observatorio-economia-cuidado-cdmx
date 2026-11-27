@@ -1,0 +1,34 @@
+# Configuración de la app de Streamlit (tablero/app.py). Streamlit la lee desde la raíz
+# del repositorio, tanto en local como en Streamlit Community Cloud.
+# Paleta Jacaranda (propuesta del equipo, noviembre de 2026): los colores salen de la
+# ciudad y son los mismos de frontend/css/tokens.css. Las gráficas en Altair toman sus
+# colores de tablero/estilo.py; chartCategoricalColors y chartSequentialColors aplican a
+# las gráficas nativas de Streamlit, en este orden fijo.
+
+[browser]
+gatherUsageStats = false
+
+[client]
+# Quien visita la app no ve las opciones de desarrollo.
+toolbarMode = "viewer"
+
+[theme]
+baseRadius = "medium"
+
+[theme.light]
+primaryColor = "#6B4FA0"
+backgroundColor = "#FBFAFD"
+secondaryBackgroundColor = "#F0EDF6"
+textColor = "#221D2E"
+borderColor = "#E2DDEB"
+chartCategoricalColors = ["#6B4FA0", "#167A58", "#C97F12", "#C2366E", "#3A6FB0", "#9A4A3A"]
+chartSequentialColors = ["#EEE9F7", "#D2C6EC", "#AE9AD9", "#8A6FC2", "#6B4FA0", "#4D3778", "#2F2150"]
+
+[theme.dark]
+primaryColor = "#9277CF"
+backgroundColor = "#16131D"
+secondaryBackgroundColor = "#2A2436"
+textColor = "#EEEAF5"
+borderColor = "#3A3248"
+chartCategoricalColors = ["#9277CF", "#24946B", "#C98420", "#CF4D86", "#4F82C9", "#B85E4A"]
+chartSequentialColors = ["#2F2150", "#4D3778", "#6B4FA0", "#8A6FC2", "#AE9AD9", "#D2C6EC", "#EEE9F7"]

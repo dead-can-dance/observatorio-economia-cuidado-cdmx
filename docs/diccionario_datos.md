@@ -1,7 +1,10 @@
 # Diccionario de datos — esquema `indicadores`
 
-Estas nueve tablas son **las únicas que debe leer el tablero**. Ya vienen agregadas,
-cruzadas y con el contexto necesario para citar cualquier cifra. Los esquemas `cruda`
+Estas quince tablas son **las únicas que debe leer el tablero**. Ya vienen agregadas,
+cruzadas y con el contexto necesario para citar cualquier cifra. Las nueve primeras son el
+diagnóstico descriptivo (notebook 02); las seis de la
+[capa analítica](#capa-analítica-notebook-03) salen del notebook 03 (serie histórica,
+pronóstico, modelo y escenarios del trabajo integrador). Los esquemas `cruda`
 y `curada` existen para auditar y reconstruir, no para graficar.
 
 Todas las tablas llevan dos columnas de contexto:
@@ -289,10 +292,148 @@ capacitaría.
 
 ---
 
+# Capa analítica (notebook 03)
+
+Seis tablas del trabajo integrador de Analítica para Negocios. Las produce
+`notebooks/03_del_dato_a_la_decision_pp7.ipynb`; el ETL las carga sin recalcular nada.
+Dos de ellas **no son mediciones**: `horas_cuidado_ageb` es una estimación de un modelo y
+`escenarios_programa` es un escenario simulado (ver advertencias 6 y 7).
+
+## `indicadores.oferta_historica`
+
+**Para qué sirve en el tablero.** La serie de la oferta formal de respaldo en la CDMX:
+guarderías, residencias y asilos de personas mayores y centros de día, en 19 ediciones del
+DENUE (01/2016 a 05/2026). Mismas claves SCIAN que el notebook 02.
+
+**Filas esperadas:** 114 (19 ediciones × 3 tipos × 2 sectores). La edición `2026-05` suma
+**838**, igual que `establecimientos_cuidado WHERE es_respaldo` (es cifra de control).
+
+| Columna | Tipo | Descripción | Unidad |
+|---|---|---|---|
+| `edicion` | `text` **PK** | Edición del DENUE, `AAAA-MM`. Faltan 05/2023 y 11/2025. | — |
+| `periodo` | `text` | Semestre de la edición: `AAAA-S1` (enero a junio) o `AAAA-S2`. | — |
+| `tipo` | `text` **PK** | `Guardería`, `Residencia / asilo` o `Centro de día`. | — |
+| `sector` | `text` **PK** | `Privado` o `Público`, según la clave SCIAN. | — |
+| `establecimientos` | `integer` | Establecimientos registrados. Conteo de directorio, no de lugares. | establecimientos |
+| `nivel_geografico` | `text` | Siempre `CDMX`. | — |
+| `fuente` | `text` | `INEGI, DENUE (19 ediciones, 01/2016 a 05/2026)`. | — |
+
+> **Las caídas son escalones, no tendencias.** La serie baja en 2019-2020 y en 11/2024,
+> cuando el DENUE incorpora los Censos Económicos 2019 y 2024. Un escalón junta cierres de
+> varios años. No se dice «cerraron 172 guarderías en un semestre».
+
+## `indicadores.pronostico_oferta`
+
+**Para qué sirve en el tablero.** El pronóstico de la oferta de respaldo a 1, 2 y 3
+semestres (2026-S2 a 2027-S2) con cinco métodos. El elegido (`elegido = TRUE`) es el
+**ingenuo**, que ganó el backtesting; solo él trae intervalos.
+
+**Filas esperadas:** 60 (4 series × 5 métodos × 3 semestres).
+
+| Columna | Tipo | Descripción | Unidad |
+|---|---|---|---|
+| `serie` | `text` **PK** | `Total de respaldo`, `Guardería`, `Residencia / asilo` o `Centro de día`. | — |
+| `metodo` | `text` **PK** | `Ingenuo`, `Suavizamiento simple`, `Holt amortiguado`, `Deriva` o `ARIMA(0,1,1)`. | — |
+| `periodo` | `text` **PK** | Semestre pronosticado. | — |
+| `horizonte` | `integer` | Semestres adelante del último dato (1 a 3). | semestres |
+| `pronostico` | `numeric(8,1)` | Establecimientos pronosticados. | establecimientos |
+| `li_80`, `ls_80` | `numeric(8,1)` | Intervalo empírico de 80 %: último valor + cuantiles 10 % y 90 % de los cambios históricos a h semestres. `NULL` fuera del método elegido. | establecimientos |
+| `li_95`, `ls_95` | `numeric(8,1)` | Igual, con cuantiles 2.5 % y 97.5 %. | establecimientos |
+| `elegido` | `boolean` | `TRUE` en el método ingenuo. | — |
+| `nivel_geografico` | `text` | Siempre `CDMX`. | — |
+| `fuente` | `text` | La del DENUE histórico. | — |
+
+> Los intervalos son **asimétricos a propósito**: la serie nunca ha subido de forma
+> relevante, así que el riesgo es solo a la baja. El pronóstico no anticipa los 300 Centros
+> de Cuidado Infantil anunciados en 09/2026 ni los Censos Económicos 2029.
+
+## `indicadores.validacion_modelos`
+
+**Para qué sirve en el tablero.** Justificar por qué se eligió cada modelo. Dos tareas:
+el pronóstico de la oferta (MAPE, RMSE y MAE con origen móvil) y el modelo de horas de
+cuidado (RMSE, MAE y R² con mujeres individuales; MAPE, RMSE, MAE y R² al predecir el
+promedio de una entidad que el modelo no vio).
+
+**Filas esperadas:** 56.
+
+| Columna | Tipo | Descripción | Unidad |
+|---|---|---|---|
+| `modelo` | `text` **PK** | Modelo evaluado. | — |
+| `tarea` | `text` **PK** | Qué se predice. | — |
+| `conjunto` | `text` **PK** | Esquema de validación: `Origen móvil`, `Prueba (20 %)`, `Validación cruzada (5 pliegues)`, `Dejando fuera una entidad (32)`. | — |
+| `metrica` | `text` **PK** | `MAPE` (en %), `RMSE`, `MAE` o `R2`. | — |
+| `valor` | `numeric(12,3)` | Valor de la métrica, en las unidades de la tarea. | según `metrica` |
+| `n_evaluaciones` | `integer` | Pronósticos, pliegues o casos que sostienen la métrica. | — |
+| `elegido` | `boolean` | `TRUE` en el modelo elegido de cada tarea. | — |
+| `nivel_geografico` | `text` | `CDMX` (pronóstico) o `Nacional` (modelo de horas). | — |
+| `fuente` | `text` | Fuente de los datos validados. | — |
+
+## `indicadores.modelo_horas_coeficientes`
+
+**Para qué sirve en el tablero.** Explicar el modelo: cuántas horas semanales de cuidado
+suma o resta cada característica del hogar de una mujer de 15 a 59 (regresión lineal
+ponderada con `fac_per`, ENUT 2024, 30,301 mujeres de todo el país).
+
+**Filas esperadas:** 12 (constante + 11 variables).
+
+| Columna | Tipo | Descripción | Unidad |
+|---|---|---|---|
+| `variable` | `text` **PK** | Nombre en el notebook 03 (`n_0a5`, `ocupada`...). | — |
+| `descripcion` | `text` | Qué mide. | — |
+| `coeficiente` | `numeric(8,3)` | Horas semanales por unidad de la variable, con las demás fijas. | horas por semana |
+| `variable_censo` | `text` | Cómo se construye con el Censo 2020 por AGEB. | — |
+| `nivel_geografico` | `text` | Siempre `Nacional`. | — |
+| `fuente` | `text` | `Modelo PP7 con INEGI, ENUT 2024`. | — |
+
+## `indicadores.horas_cuidado_ageb`
+
+**Para qué sirve en el tablero.** Las horas de cuidado no remunerado estimadas en cada una
+de las 2,320 AGEB de `carga_ageb` (estimación en áreas pequeñas), calibradas para que la
+CDMX dé el promedio de la ENUT (9.37 h por mujer de 15 a 59). Se une a `carga_ageb` por
+`cvegeo_ageb` para tener coordenadas.
+
+**Filas esperadas:** 2,320.
+
+| Columna | Tipo | Descripción | Unidad |
+|---|---|---|---|
+| `cvegeo_ageb` | `text` **PK** | Llave territorial de 13 caracteres. | — |
+| `cve_mun` | `text` | Clave de alcaldía. | — |
+| `alcaldia` | `text` | Nombre de la alcaldía. | — |
+| `mujeres_15a59` | `integer` | Mujeres de 15 a 59 (Censo 2020). | mujeres |
+| `horas_mujer_semana` | `numeric(5,1)` | Horas semanales estimadas por mujer, incluyendo a las que no cuidan. | horas por semana |
+| `horas_semana_total` | `integer` | `horas_mujer_semana` (sin redondear) × `mujeres_15a59`. Para sumar. | horas por semana |
+| `alta_carga`, `sin_respaldo` | `boolean` | Iguales que en `carga_ageb`. | — |
+| `variables_imputadas` | `boolean` | `TRUE` en 7 AGEB con alguna celda reservada, llenada con la mediana de su alcaldía. | — |
+| `nivel_geografico` | `text` | Siempre `AGEB`. | — |
+| `fuente` | `text` | `Modelo PP7 con INEGI, ENUT 2024 + Censo 2020`. | — |
+
+## `indicadores.escenarios_programa`
+
+**Para qué sirve en el tablero.** La factibilidad de la Red de Cuidado a Domicilio «Manos
+que Cuidan» en las 25 AGEB de Iztapalapa sin respaldo: supuestos e indicadores (VAN, TIR,
+payback, punto de equilibrio, requerimiento de capital) de los escenarios pesimista,
+realista y optimista, más el valor esperado. Las reglas están en
+`backend/observatorio/factibilidad.py`; el repositorio verifica al arrancar que el VAN
+realista de la tabla coincida con ese módulo.
+
+**Filas esperadas:** 74.
+
+| Columna | Tipo | Descripción | Unidad |
+|---|---|---|---|
+| `escenario` | `text` **PK** | `Pesimista`, `Realista`, `Optimista`, `Valor esperado` o `Zona del programa`. | — |
+| `indicador` | `text` **PK** | Indicador, o supuesto si empieza con `Supuesto:`. | — |
+| `valor` | `numeric(14,2)` | Valor. `NULL` cuando no existe (TIR o payback de un flujo que no se recupera). Pesos constantes de 2026. | según `unidad` |
+| `unidad` | `text` | Cómo leer el valor. | — |
+| `nivel_geografico` | `text` | Siempre `AGEB`. | — |
+| `fuente` | `text` | `Escenario simulado PP7 (backend/observatorio/factibilidad.py)`. | — |
+
+---
+
 # Cómo NO leer estos datos
 
-Cinco advertencias que hay que respetar en cualquier gráfica, texto o presentación que
-salga de este repositorio.
+Siete advertencias que hay que respetar en cualquier gráfica, texto o presentación que
+salga de este repositorio. Las cinco primeras son del diagnóstico; la 6 y la 7, de la capa
+analítica.
 
 ### 1. El DENUE cuenta establecimientos, no lugares disponibles
 
@@ -361,3 +502,23 @@ Los datos de hombres (`enut_carga_actividad` con `sexo = 'Hombres'`,
 `enut_doble_jornada`) existen **únicamente para dimensionar la brecha**. No son un tema
 del Observatorio y no deben encabezar una gráfica, un título ni una conclusión. El
 sufijo `_ref` y la etiqueta `(ref.)` están puestos justamente para recordarlo.
+
+### 6. Las horas por AGEB son una estimación, no una medición
+
+`horas_cuidado_ageb` aplica un modelo de la ENUT a las variables del Censo. Su error al
+predecir el promedio de una entidad es de ~8 % (MAPE); en una AGEB será mayor. Ordena bien
+las zonas, pero no da una cifra exacta para ninguna.
+
+**No se puede decir:** «en la AGEB X las mujeres cuidan 10.4 horas a la semana».
+**Sí se puede decir:** «el modelo estima que en las 88 AGEB sin respaldo las mujeres cuidan
+alrededor de 10 horas a la semana cada una, más que el promedio de la ciudad».
+
+### 7. Los escenarios del programa son simulados
+
+El programa, su operador y su convenio de subsidio no existen: son el escenario simulado que
+el equipo acordó al no tener institución de partida. Los supuestos tienen fuente, pero el VAN
+y la TIR son resultados de un modelo, no de una operación real.
+
+**No se puede decir:** «la red de cuidado tiene un VAN de $0.49 millones».
+**Sí se puede decir:** «en el escenario realista simulado, con un subsidio de $40 por hora, la
+red tendría un VAN de $0.49 millones a 60 meses».

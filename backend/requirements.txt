@@ -1,0 +1,7 @@
+# Backend del observatorio. Lo instala `python iniciar.py` la primera vez.
+fastapi>=0.115,<1
+uvicorn>=0.30,<1
+# Mismo tope que piden los notebooks (README): así ambos pueden compartir entorno.
+pandas>=2.2.3,<3
+# Solo para leer PostgreSQL. Sin la base, el backend usa los CSV de data/curada/.
+psycopg[binary]>=3.2,<4

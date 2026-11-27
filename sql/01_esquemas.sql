@@ -891,3 +891,229 @@ COMMENT ON COLUMN indicadores.enasic_cuidadoras.variable_enasic IS
 COMMENT ON COLUMN indicadores.enasic_cuidadoras.nivel_geografico IS
     'Siempre "Nacional". No existe forma de desagregarlo con los datos públicos.';
 COMMENT ON COLUMN indicadores.enasic_cuidadoras.fuente IS 'Siempre "INEGI, ENASIC 2022".';
+
+
+-- =============================================================================
+-- 4. CAPA ANALÍTICA (notebook 03, trabajo integrador)
+-- Serie histórica de la oferta, pronóstico, validación de modelos, modelo de
+-- horas de cuidado, estimación por AGEB y escenarios del programa. Los CSV ya
+-- traen la forma final: el ETL solo tipa y redondea.
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- 4.1 Oferta formal de respaldo por edición del DENUE (2016-2026)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS indicadores.oferta_historica (
+    edicion                 TEXT NOT NULL,
+    periodo                 TEXT NOT NULL,
+    tipo                    TEXT NOT NULL,
+    sector                  TEXT NOT NULL,
+    establecimientos        INTEGER NOT NULL,
+    nivel_geografico        TEXT NOT NULL
+        CHECK (nivel_geografico IN ('AGEB', 'Alcaldía', 'CDMX', 'Nacional')),
+    fuente                  TEXT NOT NULL,
+    PRIMARY KEY (edicion, tipo, sector)
+);
+
+COMMENT ON TABLE indicadores.oferta_historica IS
+    'Establecimientos de respaldo (guarderías, residencias y asilos de personas mayores, '
+    'centros de día) de la CDMX en 19 ediciones del DENUE, de 01/2016 a 05/2026. Mismas '
+    'claves SCIAN que el notebook 02. La edición 05/2026 suma 838, igual que '
+    'establecimientos_cuidado WHERE es_respaldo. Las caídas llegan en escalones '
+    '(2019-2020 y 2024-11), cuando el DENUE incorpora los Censos Económicos: un escalón '
+    'acumula cierres de varios años, no de un semestre.';
+COMMENT ON COLUMN indicadores.oferta_historica.edicion IS
+    'Edición del DENUE, "AAAA-MM". Faltan 05/2023 y 11/2025, que no se publicaron con el '
+    'mismo nombre de archivo.';
+COMMENT ON COLUMN indicadores.oferta_historica.periodo IS
+    'Semestre de la edición, "AAAA-S1" (enero a junio) o "AAAA-S2".';
+COMMENT ON COLUMN indicadores.oferta_historica.tipo IS
+    '"Guardería", "Residencia / asilo" o "Centro de día".';
+COMMENT ON COLUMN indicadores.oferta_historica.sector IS '"Privado" o "Público", según la clave SCIAN.';
+COMMENT ON COLUMN indicadores.oferta_historica.establecimientos IS
+    'Establecimientos registrados. Es un conteo de directorio, no de lugares disponibles.';
+COMMENT ON COLUMN indicadores.oferta_historica.nivel_geografico IS 'Siempre "CDMX".';
+COMMENT ON COLUMN indicadores.oferta_historica.fuente IS
+    'Siempre "INEGI, DENUE (19 ediciones, 01/2016 a 05/2026)".';
+
+
+-- -----------------------------------------------------------------------------
+-- 4.2 Pronóstico de la oferta de respaldo (1 a 3 semestres)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS indicadores.pronostico_oferta (
+    serie                   TEXT NOT NULL,
+    metodo                  TEXT NOT NULL,
+    periodo                 TEXT NOT NULL,
+    horizonte               INTEGER NOT NULL,
+    pronostico              NUMERIC(8,1) NOT NULL,
+    li_80                   NUMERIC(8,1),
+    ls_80                   NUMERIC(8,1),
+    li_95                   NUMERIC(8,1),
+    ls_95                   NUMERIC(8,1),
+    elegido                 BOOLEAN NOT NULL,
+    nivel_geografico        TEXT NOT NULL
+        CHECK (nivel_geografico IN ('AGEB', 'Alcaldía', 'CDMX', 'Nacional')),
+    fuente                  TEXT NOT NULL,
+    PRIMARY KEY (serie, metodo, periodo)
+);
+
+COMMENT ON TABLE indicadores.pronostico_oferta IS
+    'Pronóstico de la oferta de respaldo con cinco métodos (ingenuo, suavizamiento simple, '
+    'Holt amortiguado, deriva, ARIMA(0,1,1)) para 2026-S2, 2027-S1 y 2027-S2. El elegido '
+    'es el ingenuo: ganó el backtesting de origen móvil (ver validacion_modelos). Solo el '
+    'elegido trae intervalos.';
+COMMENT ON COLUMN indicadores.pronostico_oferta.serie IS
+    '"Total de respaldo", "Guardería", "Residencia / asilo" o "Centro de día".';
+COMMENT ON COLUMN indicadores.pronostico_oferta.metodo IS 'Método de pronóstico.';
+COMMENT ON COLUMN indicadores.pronostico_oferta.periodo IS 'Semestre pronosticado.';
+COMMENT ON COLUMN indicadores.pronostico_oferta.horizonte IS 'Semestres adelante del último dato (1 a 3).';
+COMMENT ON COLUMN indicadores.pronostico_oferta.pronostico IS 'Establecimientos pronosticados.';
+COMMENT ON COLUMN indicadores.pronostico_oferta.li_80 IS
+    'Límite inferior del intervalo empírico de 80 %: último valor + cuantil 10 % de los '
+    'cambios históricos a h semestres. Asimétrico a propósito: la serie solo ha caído.';
+COMMENT ON COLUMN indicadores.pronostico_oferta.ls_80 IS 'Límite superior del intervalo empírico de 80 %.';
+COMMENT ON COLUMN indicadores.pronostico_oferta.li_95 IS 'Límite inferior del intervalo empírico de 95 %.';
+COMMENT ON COLUMN indicadores.pronostico_oferta.ls_95 IS 'Límite superior del intervalo empírico de 95 %.';
+COMMENT ON COLUMN indicadores.pronostico_oferta.elegido IS 'TRUE en el método elegido (ingenuo).';
+COMMENT ON COLUMN indicadores.pronostico_oferta.nivel_geografico IS 'Siempre "CDMX".';
+COMMENT ON COLUMN indicadores.pronostico_oferta.fuente IS 'Siempre la del DENUE histórico.';
+
+
+-- -----------------------------------------------------------------------------
+-- 4.3 Validación de los modelos (pronóstico y horas de cuidado)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS indicadores.validacion_modelos (
+    modelo                  TEXT NOT NULL,
+    tarea                   TEXT NOT NULL,
+    conjunto                TEXT NOT NULL,
+    metrica                 TEXT NOT NULL,
+    valor                   NUMERIC(12,3) NOT NULL,
+    n_evaluaciones          INTEGER,
+    elegido                 BOOLEAN NOT NULL,
+    nivel_geografico        TEXT NOT NULL
+        CHECK (nivel_geografico IN ('AGEB', 'Alcaldía', 'CDMX', 'Nacional')),
+    fuente                  TEXT NOT NULL,
+    PRIMARY KEY (tarea, conjunto, modelo, metrica)
+);
+
+COMMENT ON TABLE indicadores.validacion_modelos IS
+    'Métricas de desempeño de los modelos comparados. Pronóstico de la oferta: MAPE, RMSE '
+    'y MAE con origen móvil. Horas de cuidado: RMSE, MAE y R2 en la prueba de 20 % y en '
+    'validación cruzada de 5 pliegues (por hogar), y MAPE, RMSE, MAE y R2 al predecir el '
+    'promedio de una entidad que el modelo no vio (32 corridas), que es la prueba que '
+    'importa para aplicar el modelo a las AGEB.';
+COMMENT ON COLUMN indicadores.validacion_modelos.modelo IS 'Modelo evaluado.';
+COMMENT ON COLUMN indicadores.validacion_modelos.tarea IS 'Qué se predice.';
+COMMENT ON COLUMN indicadores.validacion_modelos.conjunto IS 'Esquema de validación.';
+COMMENT ON COLUMN indicadores.validacion_modelos.metrica IS '"MAPE" (en %), "RMSE", "MAE" o "R2".';
+COMMENT ON COLUMN indicadores.validacion_modelos.valor IS
+    'Valor de la métrica. MAPE en porcentaje; RMSE y MAE en las unidades de la tarea '
+    '(establecimientos u horas por semana).';
+COMMENT ON COLUMN indicadores.validacion_modelos.n_evaluaciones IS
+    'Pronósticos evaluados, pliegues o casos de prueba que sostienen la métrica.';
+COMMENT ON COLUMN indicadores.validacion_modelos.elegido IS 'TRUE en el modelo elegido de cada tarea.';
+COMMENT ON COLUMN indicadores.validacion_modelos.nivel_geografico IS
+    '"CDMX" para el pronóstico de la oferta; "Nacional" para el modelo de horas.';
+COMMENT ON COLUMN indicadores.validacion_modelos.fuente IS 'Fuente de los datos validados.';
+
+
+-- -----------------------------------------------------------------------------
+-- 4.4 Coeficientes del modelo de horas de cuidado (ENUT 2024)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS indicadores.modelo_horas_coeficientes (
+    variable                TEXT PRIMARY KEY,
+    descripcion             TEXT NOT NULL,
+    coeficiente             NUMERIC(8,3) NOT NULL,
+    variable_censo          TEXT NOT NULL,
+    nivel_geografico        TEXT NOT NULL
+        CHECK (nivel_geografico IN ('AGEB', 'Alcaldía', 'CDMX', 'Nacional')),
+    fuente                  TEXT NOT NULL
+);
+
+COMMENT ON TABLE indicadores.modelo_horas_coeficientes IS
+    'Regresión lineal ponderada (fac_per) de las horas semanales de cuidado no remunerado '
+    'a integrantes del hogar de las mujeres de 15 a 59 (ENUT 2024, 30,301 mujeres de todo '
+    'el país). Se eligió sobre un Random Forest porque es la única que se puede aplicar a '
+    'promedios del Censo por AGEB (ver validacion_modelos).';
+COMMENT ON COLUMN indicadores.modelo_horas_coeficientes.variable IS 'Nombre de la variable en el notebook 03.';
+COMMENT ON COLUMN indicadores.modelo_horas_coeficientes.descripcion IS 'Qué mide la variable.';
+COMMENT ON COLUMN indicadores.modelo_horas_coeficientes.coeficiente IS
+    'Horas semanales que suma (o resta) una unidad de la variable, manteniendo las demás fijas.';
+COMMENT ON COLUMN indicadores.modelo_horas_coeficientes.variable_censo IS
+    'Cómo se construye la variable con el Censo 2020 por AGEB.';
+COMMENT ON COLUMN indicadores.modelo_horas_coeficientes.nivel_geografico IS 'Siempre "Nacional" (muestra de entrenamiento).';
+COMMENT ON COLUMN indicadores.modelo_horas_coeficientes.fuente IS 'Siempre "Modelo PP7 con INEGI, ENUT 2024".';
+
+
+-- -----------------------------------------------------------------------------
+-- 4.5 Horas de cuidado no remunerado estimadas por AGEB
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS indicadores.horas_cuidado_ageb (
+    cvegeo_ageb             TEXT PRIMARY KEY,
+    cve_mun                 TEXT NOT NULL,
+    alcaldia                TEXT NOT NULL,
+    mujeres_15a59           INTEGER NOT NULL,
+    horas_mujer_semana      NUMERIC(5,1) NOT NULL,
+    horas_semana_total      INTEGER NOT NULL,
+    alta_carga              BOOLEAN,
+    sin_respaldo            BOOLEAN,
+    variables_imputadas     BOOLEAN NOT NULL,
+    nivel_geografico        TEXT NOT NULL
+        CHECK (nivel_geografico IN ('AGEB', 'Alcaldía', 'CDMX', 'Nacional')),
+    fuente                  TEXT NOT NULL
+);
+
+COMMENT ON TABLE indicadores.horas_cuidado_ageb IS
+    'Estimación en áreas pequeñas: el modelo de modelo_horas_coeficientes aplicado a las '
+    'variables del Censo 2020 de las mismas 2,320 AGEB de carga_ageb, calibrado para que la '
+    'CDMX dé el promedio de la ENUT (9.37 h). ES UNA ESTIMACIÓN, NO UNA MEDICIÓN. Se une a '
+    'carga_ageb por cvegeo_ageb para tener coordenadas.';
+COMMENT ON COLUMN indicadores.horas_cuidado_ageb.cvegeo_ageb IS 'Llave territorial de 13 caracteres, igual que en carga_ageb.';
+COMMENT ON COLUMN indicadores.horas_cuidado_ageb.cve_mun IS 'Clave de alcaldía, 3 caracteres.';
+COMMENT ON COLUMN indicadores.horas_cuidado_ageb.alcaldia IS 'Nombre de la alcaldía.';
+COMMENT ON COLUMN indicadores.horas_cuidado_ageb.mujeres_15a59 IS 'Mujeres de 15 a 59 (Censo 2020).';
+COMMENT ON COLUMN indicadores.horas_cuidado_ageb.horas_mujer_semana IS
+    'Horas semanales de cuidado no remunerado estimadas por mujer de 15 a 59, promedio que '
+    'incluye a quienes no cuidan.';
+COMMENT ON COLUMN indicadores.horas_cuidado_ageb.horas_semana_total IS
+    'horas_mujer_semana (sin redondear) × mujeres_15a59. Para sumar por alcaldía o zona.';
+COMMENT ON COLUMN indicadores.horas_cuidado_ageb.alta_carga IS 'Igual que carga_ageb.alta_carga.';
+COMMENT ON COLUMN indicadores.horas_cuidado_ageb.sin_respaldo IS 'Igual que carga_ageb.sin_respaldo (exploratorio).';
+COMMENT ON COLUMN indicadores.horas_cuidado_ageb.variables_imputadas IS
+    'TRUE si alguna variable venía reservada por confidencialidad y se llenó con la mediana '
+    'de su alcaldía (7 AGEB).';
+COMMENT ON COLUMN indicadores.horas_cuidado_ageb.nivel_geografico IS 'Siempre "AGEB".';
+COMMENT ON COLUMN indicadores.horas_cuidado_ageb.fuente IS 'Siempre "Modelo PP7 con INEGI, ENUT 2024 + Censo 2020".';
+
+
+-- -----------------------------------------------------------------------------
+-- 4.6 Escenarios del programa de cuidado a domicilio (escenario simulado)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS indicadores.escenarios_programa (
+    escenario               TEXT NOT NULL,
+    indicador               TEXT NOT NULL,
+    valor                   NUMERIC(14,2),
+    unidad                  TEXT NOT NULL,
+    nivel_geografico        TEXT NOT NULL
+        CHECK (nivel_geografico IN ('AGEB', 'Alcaldía', 'CDMX', 'Nacional')),
+    fuente                  TEXT NOT NULL,
+    PRIMARY KEY (escenario, indicador)
+);
+
+COMMENT ON TABLE indicadores.escenarios_programa IS
+    'Factibilidad de la Red de Cuidado a Domicilio «Manos que Cuidan» en las 25 AGEB de '
+    'Iztapalapa sin respaldo (ESCENARIO SIMULADO: el operador es hipotético). Supuestos e '
+    'indicadores (VAN, TIR, payback, punto de equilibrio, capital) de los escenarios '
+    'pesimista, realista y optimista, más el valor esperado. Las reglas están en '
+    'backend/observatorio/factibilidad.py; el repositorio verifica al arrancar que el VAN '
+    'realista de esta tabla coincida con ese módulo.';
+COMMENT ON COLUMN indicadores.escenarios_programa.escenario IS
+    '"Pesimista", "Realista", "Optimista", "Valor esperado" o "Zona del programa".';
+COMMENT ON COLUMN indicadores.escenarios_programa.indicador IS
+    'Indicador o supuesto (los supuestos empiezan con "Supuesto:").';
+COMMENT ON COLUMN indicadores.escenarios_programa.valor IS
+    'NULL cuando el indicador no existe en ese escenario (p. ej. TIR o payback de un flujo '
+    'que nunca se recupera). Pesos constantes de 2026.';
+COMMENT ON COLUMN indicadores.escenarios_programa.unidad IS 'Cómo leer el valor.';
+COMMENT ON COLUMN indicadores.escenarios_programa.nivel_geografico IS 'Siempre "AGEB" (las 25 AGEB de la zona).';
+COMMENT ON COLUMN indicadores.escenarios_programa.fuente IS 'Escenario simulado PP7.';

@@ -1,0 +1,13 @@
+variable,descripcion,coeficiente,variable_censo,nivel_geografico,fuente
+constante,Constante,9.687859318956598,—,Nacional,"Modelo PP7 con INEGI, ENUT 2024"
+n_0a5,Niñas y niños de 0 a 5 en el hogar,14.389333084290685,(P_0A2 + P_3A5) / TOTHOG,Nacional,"Modelo PP7 con INEGI, ENUT 2024"
+n_6a14,Niñas y niños de 6 a 14 en el hogar,3.8871978221250982,(P_6A11 + P_12A14) / TOTHOG,Nacional,"Modelo PP7 con INEGI, ENUT 2024"
+n_60mas,Personas de 60 años o más en el hogar,1.0793327885802624,P_60YMAS / TOTHOG,Nacional,"Modelo PP7 con INEGI, ENUT 2024"
+n_disc,"Personas con discapacidad para bañarse, vestirse o comer en el hogar",8.087232683882169,PCDISC_MOT2 / TOTHOG,Nacional,"Modelo PP7 con INEGI, ENUT 2024"
+tam,Integrantes del hogar,-1.6229281281022057,PROM_OCUP,Nacional,"Modelo PP7 con INEGI, ENUT 2024"
+edad_15a24,Tiene de 15 a 24 años (referencia: 25 a 49),-3.443270321816901,(P_15A17_F + P_18A24_F) / mujeres 15-59,Nacional,"Modelo PP7 con INEGI, ENUT 2024"
+edad_50a59,Tiene de 50 a 59 años (referencia: 25 a 49),-4.325156292840448,(mujeres 15-59 − P_15A49_F) / mujeres 15-59,Nacional,"Modelo PP7 con INEGI, ENUT 2024"
+ocupada,Está ocupada,-2.7658462274253433,POCUPADA_F / P_12YMAS_F,Nacional,"Modelo PP7 con INEGI, ENUT 2024"
+anios_esc,Años de escolaridad,0.46127854149784936,GRAPROES_F,Nacional,"Modelo PP7 con INEGI, ENUT 2024"
+jefa_hog,Vive en un hogar con jefatura femenina,-2.259059512326748,PHOGJEF_F / POBHOG,Nacional,"Modelo PP7 con INEGI, ENUT 2024"
+urbana,Localidad de 100 mil habitantes o más,0.00966899208657364,1 en todas las AGEB urbanas,Nacional,"Modelo PP7 con INEGI, ENUT 2024"

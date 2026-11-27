@@ -1,6 +1,6 @@
-"""Carga las nueve tablas de `indicadores` en memoria y verifica las cifras de control.
+"""Carga las quince tablas de `indicadores` en memoria y verifica las cifras de control.
 
-Son ~4,000 filas: caben de sobra en memoria, así que se leen una vez al arrancar y la
+Son ~6,700 filas: caben de sobra en memoria, así que se leen una vez al arrancar y la
 API responde sin volver a la fuente.
 
 Fuente de datos (OBSERVATORIO_FUENTE):
@@ -14,7 +14,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from . import esquema, fuente_csv, fuente_postgres
+from . import esquema, factibilidad, fuente_csv, fuente_postgres
 
 log = logging.getLogger('observatorio')
 
@@ -25,6 +25,11 @@ def _kpi(tablas, clave):
     df = tablas['kpi_cdmx']
     fila = df[df['clave'] == clave]
     return None if fila.empty else round(float(fila['valor_num'].iloc[0]), 1)
+
+
+def _escenario(tablas, escenario, indicador):
+    df = _primero(tablas['escenarios_programa'], escenario=escenario, indicador=indicador)
+    return None if df.empty or df['valor'].isna().iloc[0] else round(float(df['valor'].iloc[0]))
 
 
 def _primero(df, **filtros):
@@ -57,6 +62,16 @@ CONTROLES = [
     ('% de cuidadoras que prefiere cuidado en casa (ENASIC)',
      lambda t: round(float(_primero(t['enasic_cuidadoras'], tema='Preferencia de cuidado',
                                     categoria='En su casa')['pct'].iloc[0]), 1), 61.2),
+    # Capa analítica. La serie histórica del DENUE debe cerrar en el conteo de la edición
+    # actual, y la tabla de escenarios debe ser la que produce hoy el modelo financiero:
+    # si alguien cambia un supuesto en factibilidad.py sin volver a correr el notebook 03,
+    # este control lo avisa.
+    ('Respaldo DENUE 05/2026 en la serie histórica',
+     lambda t: int(t['oferta_historica'].loc[t['oferta_historica']['edicion'] == '2026-05',
+                                             'establecimientos'].sum()), 838),
+    ('VAN realista del programa (coincide con factibilidad.py)',
+     lambda t: _escenario(t, 'Realista', 'VAN'),
+     round(factibilidad.evaluar(factibilidad.ESCENARIOS['Realista']).van)),
 ]
 
 

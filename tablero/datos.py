@@ -1,7 +1,7 @@
-"""Datos de la app: las nueve tablas del esquema `indicadores`, cargadas una sola vez.
+"""Datos de la app: las quince tablas del esquema `indicadores`, cargadas una sola vez.
 
 Reutiliza el backend del observatorio web (backend/observatorio): la misma réplica del
-ETL, las mismas 18 cifras de control y los mismos hallazgos redactados. Así la app de
+ETL, las mismas cifras de control y los mismos hallazgos redactados. Así la app de
 Streamlit y la página web no pueden contar cosas distintas.
 
 En Streamlit Community Cloud no hay .env ni PostgreSQL: las tablas se reconstruyen desde
@@ -18,7 +18,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 if str(RAIZ / 'backend') not in sys.path:
     sys.path.insert(0, str(RAIZ / 'backend'))
 
-from observatorio import analisis, metodologia  # noqa: E402
+from observatorio import analisis, factibilidad, metodologia  # noqa: E402,F401
 from observatorio.configuracion import cargar_configuracion  # noqa: E402
 from observatorio.esquema import TABLAS, TEMAS_ENASIC  # noqa: E402,F401
 from observatorio.fuente_csv import CLAVE_BRECHA_NO_PAGADO  # noqa: E402
@@ -75,6 +75,39 @@ def ficha_alcaldia(cve_mun):
 def territorio(cve_mun=None):
     repo = repositorio()
     return {**analisis.resumen_agebs(repo, cve_mun), **analisis.histograma_carga(repo, cve_mun)}
+
+
+def _valor_escenario(esc, escenario, indicador):
+    fila = esc[(esc['escenario'] == escenario) & (esc['indicador'] == indicador)]
+    return None if fila.empty or pd.isna(fila['valor'].iloc[0]) else float(fila['valor'].iloc[0])
+
+
+@st.cache_data(show_spinner=False)
+def resumen_decision():
+    """Cifras de cabecera de la página Decisión. Las usan Decisión y el Inicio, así que las dos
+    páginas no pueden contar cosas distintas.
+
+    La oferta y las horas de cuidado son datos del observatorio; las familias, el VAN y el
+    subsidio salen del escenario simulado del programa (indicadores.escenarios_programa).
+    """
+    total_ed = tabla('oferta_historica').groupby('edicion')['establecimientos'].sum()
+    horas = tabla('horas_cuidado_ageb')
+    sin = horas[horas['sin_respaldo'].fillna(False)]
+    horas_sin = float(sin['horas_semana_total'].sum())
+    esc = tabla('escenarios_programa')
+    return {
+        'oferta_hoy': int(total_ed.loc['2026-05']),
+        'oferta_2016': int(total_ed.loc['2016-01']),
+        'horas_sin_respaldo': horas_sin,
+        'horas_mujer_sin_respaldo': horas_sin / float(sin['mujeres_15a59'].sum()),
+        'horas_mujer_ciudad': float(horas['horas_semana_total'].sum()) / float(horas['mujeres_15a59'].sum()),
+        'familias_estable': _valor_escenario(esc, 'Realista', 'Familias atendidas en estado estable'),
+        'punto_equilibrio': _valor_escenario(esc, 'Realista', 'Punto de equilibrio en familias'),
+        'van_esperado_etapas': _valor_escenario(esc, 'Valor esperado', 'VAN con revisión en el mes 12'),
+        'van_realista': _valor_escenario(esc, 'Realista', 'VAN'),
+        'subsidio_equilibrio': _valor_escenario(esc, 'Zona del programa', 'Subsidio mínimo para VAN ≥ 0 (realista)'),
+        'subsidio_supuesto': _valor_escenario(esc, 'Realista', 'Supuesto: Subsidio público por hora'),
+    }
 
 
 def alcaldias_alfabetico():

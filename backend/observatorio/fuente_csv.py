@@ -119,7 +119,7 @@ def booleano(v):
 
 
 # =============================================================================
-# Construcción de las nueve tablas
+# Construcción de las quince tablas
 # =============================================================================
 
 def _unidad_kpi(clave, valor_num):
@@ -359,6 +359,66 @@ def _enasic(d):
     return filas
 
 
+# --- Capa analítica (notebook 03) ---------------------------------------------------------
+# Los CSV ya traen la forma final de la tabla: aquí solo se tipan y se redondean, igual
+# que en la sección 5.10 del ETL.
+
+def _oferta_historica(d):
+    return [{
+        'edicion': f['edicion'], 'periodo': f['periodo'], 'tipo': f['tipo'], 'sector': f['sector'],
+        'establecimientos': entero(f['establecimientos']),
+        'nivel_geografico': f['nivel_geografico'], 'fuente': f['fuente'],
+    } for f in d['denue_oferta_historica']]
+
+
+def _pronostico_oferta(d):
+    return [{
+        'serie': f['serie'], 'metodo': f['metodo'], 'periodo': f['periodo'],
+        'horizonte': entero(f['horizonte']),
+        **{c: tasa(f[c], enteros=8) for c in ('pronostico', 'li_80', 'ls_80', 'li_95', 'ls_95')},
+        'elegido': booleano(f['elegido']),
+        'nivel_geografico': f['nivel_geografico'], 'fuente': f['fuente'],
+    } for f in d['pronostico_oferta_cdmx']]
+
+
+def _validacion_modelos(d):
+    return [{
+        'modelo': f['modelo'], 'tarea': f['tarea'], 'conjunto': f['conjunto'], 'metrica': f['metrica'],
+        'valor': tasa(f['valor'], enteros=12, decimales=3),
+        'n_evaluaciones': entero(f['n_evaluaciones']), 'elegido': booleano(f['elegido']),
+        'nivel_geografico': f['nivel_geografico'], 'fuente': f['fuente'],
+    } for f in d['validacion_modelos']]
+
+
+def _modelo_coeficientes(d):
+    return [{
+        'variable': f['variable'], 'descripcion': f['descripcion'],
+        'coeficiente': tasa(f['coeficiente'], enteros=8, decimales=3),
+        'variable_censo': f['variable_censo'],
+        'nivel_geografico': f['nivel_geografico'], 'fuente': f['fuente'],
+    } for f in d['modelo_horas_coeficientes']]
+
+
+def _horas_ageb(d):
+    return [{
+        'cvegeo_ageb': f['cvegeo_ageb'], 'cve_mun': f['cve_mun'], 'alcaldia': f['alcaldia'],
+        'mujeres_15a59': entero(f['mujeres_15a59']),
+        'horas_mujer_semana': tasa(f['horas_mujer_semana']),
+        'horas_semana_total': entero(f['horas_semana_total']),
+        'alta_carga': booleano(f['alta_carga']), 'sin_respaldo': booleano(f['sin_respaldo']),
+        'variables_imputadas': booleano(f['variables_imputadas']),
+        'nivel_geografico': f['nivel_geografico'], 'fuente': f['fuente'],
+    } for f in d['horas_cuidado_ageb']]
+
+
+def _escenarios(d):
+    return [{
+        'escenario': f['escenario'], 'indicador': f['indicador'],
+        'valor': tasa(f['valor'], enteros=14, decimales=2), 'unidad': f['unidad'],
+        'nivel_geografico': f['nivel_geografico'], 'fuente': f['fuente'],
+    } for f in d['escenarios_programa']]
+
+
 ARCHIVOS = [
     'censo2020_ageb_cuidado_cdmx', 'censo2020_alcaldia_cuidado_cdmx',
     'cruce_oferta_demanda_alcaldia', 'denue_cuidado_cdmx',
@@ -369,6 +429,9 @@ ARCHIVOS = [
     'mujeres_cuidado_por_edad', 'mujeres_doble_jornada_cdmx',
     'mujeres_enut_carga_cdmx', 'mujeres_zonas_sin_respaldo_alcaldia',
     'resumen_cifras_clave',
+    # Capa analítica (notebook 03)
+    'denue_oferta_historica', 'pronostico_oferta_cdmx', 'validacion_modelos',
+    'modelo_horas_coeficientes', 'horas_cuidado_ageb', 'escenarios_programa',
 ]
 
 _CONSTRUCTORES = {
@@ -381,11 +444,17 @@ _CONSTRUCTORES = {
     'enut_doble_jornada': _enut_doble_jornada,
     'enut_cuidado_por_grupo': _enut_por_grupo,
     'enasic_cuidadoras': _enasic,
+    'oferta_historica': _oferta_historica,
+    'pronostico_oferta': _pronostico_oferta,
+    'validacion_modelos': _validacion_modelos,
+    'modelo_horas_coeficientes': _modelo_coeficientes,
+    'horas_cuidado_ageb': _horas_ageb,
+    'escenarios_programa': _escenarios,
 }
 
 
 def construir(directorio):
-    """Devuelve las nueve tablas de `indicadores` como DataFrames (sin normalizar)."""
+    """Devuelve las quince tablas de `indicadores` como DataFrames (sin normalizar)."""
     d = {nombre: leer(directorio, nombre) for nombre in ARCHIVOS}
     return {tabla: pd.DataFrame(fn(d), columns=esquema.columnas(tabla))
             for tabla, fn in _CONSTRUCTORES.items()}

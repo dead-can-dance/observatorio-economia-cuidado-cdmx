@@ -117,6 +117,22 @@ ADVERTENCIAS = [
         'si': '«Las mujeres que cuidan dedican 12.2 h, 1.51 veces lo de los hombres '
               '(referencia)».',
     },
+    {
+        'titulo': 'Las horas por AGEB son una estimación, no una medición',
+        'texto': 'Salen de un modelo de la ENUT aplicado al Censo. Ordenan bien las zonas, pero no dan una '
+                 'cifra exacta para ninguna AGEB.',
+        'no': '«En la AGEB X las mujeres cuidan 10.4 horas a la semana».',
+        'si': '«El modelo estima que en las 88 AGEB sin respaldo cada mujer cuida alrededor de 10 horas a la '
+              'semana, más que el promedio de la ciudad».',
+    },
+    {
+        'titulo': 'Los escenarios del programa son simulados',
+        'texto': 'El programa, su operador y el convenio de subsidio no existen. El VAN y la TIR son '
+                 'resultados de un modelo con supuestos documentados, no de una operación real.',
+        'no': '«La red de cuidado tiene un VAN de $0.49 millones».',
+        'si': '«En el escenario realista simulado, con subsidio de $40 por hora, la red tendría un VAN de '
+              '$0.49 millones a 60 meses».',
+    },
 ]
 
 GLOSARIO = [
@@ -146,6 +162,15 @@ GLOSARIO = [
     {'termino': 'Presión sobre la oferta',
      'definicion': 'Población potencialmente demandante por cada establecimiento. No es '
                    'cobertura: el DENUE no publica lugares disponibles.'},
+    {'termino': 'Estimación en áreas pequeñas',
+     'definicion': 'Aplicar un modelo estimado con una encuesta (ENUT) a las variables de un censo para '
+                   'obtener una cifra en territorios donde la encuesta no alcanza (AGEB).'},
+    {'termino': 'VAN (valor actual neto)',
+     'definicion': 'Suma de los flujos del programa descontados al 10 % real anual (tasa social de '
+                   'descuento de la SHCP). Positivo: el programa crea valor.'},
+    {'termino': 'Punto de equilibrio',
+     'definicion': 'Horas de servicio al mes (o familias atendidas) con las que el margen por hora cubre '
+                   'los costos fijos.'},
     {'termino': 'Referencia (hombres)',
      'definicion': 'Las cifras de hombres se muestran solo para medir la brecha con las '
                    'mujeres.'},

@@ -249,3 +249,87 @@ def histograma(df, *, umbral):
         capas.append(alt.Chart(u).mark_text(align='left', dx=4, y=6, baseline='top', fontSize=11, color=TEXTO)
                      .encode(x='u:Q', text='texto:N'))
     return alt.layer(*capas).properties(height=260)
+
+
+# --- Página «Decisión» ------------------------------------------------------------------------
+
+def serie_y_pronostico(hist, pron, *, eventos, alternativo=None):
+    """Serie semestral observada (escalones) y pronóstico con su banda empírica.
+
+    hist: fecha (datetime), valor, texto. pron: fecha, pronostico, li_80, ls_80, li_95, ls_95.
+    eventos: [(fecha, texto)] para anotar los escalones. alternativo: fecha, valor, metodo.
+    """
+    x = alt.X('fecha:T', title=None, axis=alt.Axis(format='%Y', tickCount=8, domain=False, ticks=False))
+    tope = float(max(hist['valor'].max(), pron['ls_95'].max())) * 1.18
+    escala = alt.Scale(domain=[0, tope], nice=False)
+    y = alt.Y('valor:Q', title=None, scale=escala, axis=alt.Axis(format=',.0f', tickCount=5, domain=False, ticks=False))
+    ultimo = hist.iloc[[-1]]
+    banda = pd.concat([ultimo.assign(li_80=ultimo['valor'], ls_80=ultimo['valor'], li_95=ultimo['valor'],
+                                     ls_95=ultimo['valor'], pronostico=ultimo['valor']), pron], ignore_index=True)
+    capas = [
+        alt.Chart(banda).mark_area(color=ACENTO, opacity=0.12).encode(x='fecha:T', y=alt.Y('li_95:Q', scale=escala), y2='ls_95:Q'),
+        alt.Chart(banda).mark_area(color=ACENTO, opacity=0.22).encode(x='fecha:T', y=alt.Y('li_80:Q', scale=escala), y2='ls_80:Q'),
+        alt.Chart(hist).mark_line(color=ACENTO, strokeWidth=2.6, interpolate='step-after').encode(
+            x=x, y=y, tooltip=[alt.Tooltip('periodo:N', title='Semestre'), alt.Tooltip('texto:N', title='Establecimientos')]),
+        alt.Chart(banda).mark_line(color=ACENTO, strokeDash=[6, 4], strokeWidth=2).encode(
+            x='fecha:T', y=alt.Y('pronostico:Q', scale=escala),
+            tooltip=[alt.Tooltip('periodo:N', title='Semestre'), alt.Tooltip('pronostico:Q', title='Pronóstico', format=',.0f'),
+                     alt.Tooltip('li_80:Q', title='Mínimo 80 %', format=',.0f'), alt.Tooltip('ls_80:Q', title='Máximo 80 %', format=',.0f')]),
+    ]
+    if alternativo is not None and not alternativo.empty:
+        alt_df = pd.concat([ultimo.assign(metodo=alternativo['metodo'].iloc[0]), alternativo], ignore_index=True)
+        capas.append(alt.Chart(alt_df).mark_line(color=REFERENCIA, strokeDash=[2, 3], strokeWidth=1.6).encode(
+            x='fecha:T', y=alt.Y('valor:Q', scale=escala),
+            tooltip=[alt.Tooltip('metodo:N', title='Método'), alt.Tooltip('valor:Q', title='Pronóstico', format=',.0f')]))
+    ev = pd.DataFrame(eventos, columns=['fecha', 'texto'])
+    capas.append(alt.Chart(ev).mark_rule(color='#d03b3b', strokeDash=[2, 3], opacity=0.8).encode(x='fecha:T'))
+    capas.append(alt.Chart(ev).mark_text(align='center', baseline='top', y=4, fontSize=10.5, color=TEXTO, lineBreak='\n')
+                 .encode(x='fecha:T', text='texto:N'))
+    return alt.layer(*capas).properties(height=330)
+
+
+def barras_horizontales(df, *, sufijo='', ancho_etiqueta=260, destacar=None, color_negativo=REFERENCIA):
+    """Barras horizontales de una sola serie. df: categoria, valor, texto. Los negativos en gris."""
+    df = df.copy()
+    df['opacidad'] = 1.0 if not destacar else df['categoria'].eq(destacar).map({True: 1.0, False: 0.45})
+    df['negativo'] = df['valor'] < 0
+    orden = df['categoria'].tolist()
+    minimo = min(0.0, float(df['valor'].min()) * 1.1)
+    maximo = max(0.0, float(df['valor'].max()) * 1.3)
+    y = alt.Y('categoria:N', sort=orden, title=None, scale=alt.Scale(paddingInner=0.3),
+              axis=alt.Axis(ticks=False, domain=False, labelLimit=ancho_etiqueta, labelFontSize=11.5, labelPadding=8,
+                            labelOverlap=False))
+    x = alt.X('valor:Q', title=None, scale=alt.Scale(domain=[minimo, maximo], nice=False),
+              axis=alt.Axis(labelExpr=f"format(datum.value, ',.0f') + '{sufijo}'", tickCount=5, domain=False, ticks=False))
+    base = alt.Chart(df).encode(y=y)
+    barras = base.mark_bar(cornerRadiusEnd=4, height=ALTO_BARRA).encode(
+        x=x, color=alt.condition('datum.negativo', alt.value(color_negativo), alt.value(ACENTO)),
+        opacity=alt.Opacity('opacidad:Q', scale=None),
+        tooltip=[alt.Tooltip('categoria:N', title='Categoría'), alt.Tooltip('texto:N', title='Valor')])
+    # La etiqueta va a la derecha del extremo positivo; en las barras negativas, a la derecha del cero,
+    # para no encimarse con los nombres de las categorías.
+    df['x_texto'] = df['valor'].clip(lower=0)
+    textos = base.mark_text(align='left', dx=5, fontSize=11.5, color=TEXTO).encode(
+        x=alt.X('x_texto:Q', scale=alt.Scale(domain=[minimo, maximo], nice=False)), text='texto:N')
+    return alt.layer(barras, textos).properties(height=max(len(df) * 30, 120))
+
+
+def flujos_acumulados(df, *, colores, mes_revision=None):
+    """Flujo acumulado por escenario. df: mes, escenario, millones, texto."""
+    nombres = list(colores)
+    lineas = alt.Chart(df).mark_line(strokeWidth=2.4).encode(
+        x=alt.X('mes:Q', title='Mes', axis=alt.Axis(tickCount=6, domain=False, ticks=False, titleFontWeight=400)),
+        y=alt.Y('millones:Q', title='Flujo acumulado (millones de pesos de 2026)',
+                axis=alt.Axis(tickCount=6, domain=False, ticks=False, titleFontWeight=400, titleFontSize=11.5)),
+        color=alt.Color('escenario:N', sort=nombres, scale=alt.Scale(domain=nombres, range=list(colores.values())),
+                        legend=alt.Legend(orient='top', title=None, labelFontSize=12)),
+        strokeDash=alt.condition("datum.escenario === 'Tu escenario'", alt.value([6, 4]), alt.value([1, 0])),
+        tooltip=[alt.Tooltip('escenario:N', title='Escenario'), alt.Tooltip('mes:Q', title='Mes'),
+                 alt.Tooltip('texto:N', title='Flujo acumulado')])
+    capas = [alt.Chart(pd.DataFrame({'y': [0]})).mark_rule(color=TEXTO, opacity=0.5).encode(y='y:Q'), lineas]
+    if mes_revision:
+        r = pd.DataFrame({'mes': [mes_revision], 'texto': [f'Revisión del mes {mes_revision}']})
+        capas.append(alt.Chart(r).mark_rule(color=REFERENCIA, strokeDash=[3, 3]).encode(x='mes:Q'))
+        capas.append(alt.Chart(r).mark_text(align='left', dx=4, y=6, baseline='top', fontSize=11, color=TEXTO).encode(
+            x='mes:Q', text='texto:N'))
+    return alt.layer(*capas).properties(height=340)

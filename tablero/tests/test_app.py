@@ -4,14 +4,21 @@ respeta las advertencias del diccionario de datos.
     python -m pytest tablero/tests -q      (o: python iniciar.py --pruebas)
 """
 
+import sys
 from pathlib import Path
 
 import pytest
 from streamlit.testing.v1 import AppTest
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'backend'))
+from observatorio import esquema, repositorio  # noqa: E402
+
+# Cifras de control más un conteo de filas por cada tabla de `indicadores`.
+TOTAL_CONTROLES = len(repositorio.CONTROLES) + len(esquema.TABLAS)
+
 APP = str(Path(__file__).resolve().parents[1] / 'app.py')
 PAGINAS = ['paginas/inicio.py', 'paginas/mexico.py', 'paginas/cdmx.py', 'paginas/alcaldias.py',
-           'paginas/territorio.py', 'paginas/metodologia.py']
+           'paginas/territorio.py', 'paginas/decision.py', 'paginas/metodologia.py']
 
 
 def abrir(pagina=None, **estado):
@@ -44,6 +51,38 @@ def test_portada_encabeza_con_el_trabajo_no_pagado():
     assert '+12.7' in t, 'la brecha se lee del KPI: 12.7 h, no 12.6'
     assert '77.0' in t
     assert 'Fuente: INEGI, ENUT 2024' in t
+
+
+def test_portada_resume_decision_y_metodologia():
+    at = abrir()
+    t = texto(at)
+    assert 'Escenario simulado' in t and 'Simulado' in t, 'el adelanto de Decisión se marca como simulado'
+    assert '838' in t and '1,337' in t, 'la misma oferta que la página Decisión'
+    assert '$1.08 M' in t, 'VAN esperado invirtiendo por etapas, leído de indicadores.escenarios_programa'
+    for fuente in ('ENUT 2024', 'ENASIC 2022', 'Censo 2020', 'DENUE 05/2026'):
+        assert fuente in t
+    assert f'{TOTAL_CONTROLES} de {TOTAL_CONTROLES} cifras de control cuadran' in t
+    enlaces = [e.proto.label for e in at.get('page_link')]
+    assert 'Ir a Decisión' in enlaces and 'Ir a Metodología' in enlaces
+
+
+def test_portada_cuenta_la_historia_y_lleva_a_cada_pagina():
+    at = abrir()
+    t = texto(at)
+    for seccion in ('El panorama en datos', 'Lo que los datos permiten observar', '¿Por qué una plataforma digital?',
+                    'Explorar el observatorio'):
+        assert seccion in t
+    for titulo in ('Tener empleo no libera del cuidado', 'La presión sobre las guarderías',
+                   'Dónde se concentran las zonas sin respaldo'):
+        assert titulo in t, 'los hallazgos se toman tal cual del backend'
+    assert '44.4' in t and '61.2' in t and '3.2' in t, 'las señales de la ENASIC se leen de kpi_cdmx'
+    assert 'no permite cifras de la CDMX' in t, 'la ENASIC se presenta solo como nacional'
+    assert '125,256' in t and 'Exploratorio' in t
+    assert 'CuidaRed' in t
+    assert any('cuidared' in e.proto.url for e in at.get('link_button'))
+    enlaces = [e.proto.label for e in at.get('page_link')]
+    for pagina in ('México', 'Ciudad de México', 'Alcaldías', 'Territorio', 'Decisión', 'Metodología'):
+        assert f'Ir a {pagina}' in enlaces
 
 
 def test_enasic_se_presenta_solo_como_nacional():
@@ -83,4 +122,20 @@ def test_territorio_de_toda_la_ciudad():
 
 def test_cifras_de_control_cuadran():
     at = abrir('paginas/metodologia.py')
-    assert any('(18 de 18)' in s.value for s in at.success)
+    assert any(f'({TOTAL_CONTROLES} de {TOTAL_CONTROLES})' in s.value for s in at.success)
+
+
+def test_decision_muestra_kpis_con_meta_y_recomendacion():
+    t = texto(abrir('paginas/decision.py'))
+    assert '838' in t and '1,337' in t, 'la oferta de 2026 contra la de 2016'
+    assert 'Escenario simulado' in t
+    assert 'Fuera de meta' in t and 'En meta' in t, 'los KPI llevan estado con texto, no solo color'
+    assert 'invertir por etapas' in t
+    assert '$38.01' in t, 'subsidio de equilibrio leído de indicadores.escenarios_programa'
+
+
+def test_simulador_responde_al_subsidio():
+    at = abrir('paginas/decision.py')
+    at.slider(key='sim_sub').set_value(20).run()
+    assert not at.exception
+    assert 'Se cierra en el mes 12' in texto(at), 'con $20 por hora el programa no llega a la mitad del equilibrio'
